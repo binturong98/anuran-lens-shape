@@ -1,3 +1,13 @@
+# Weird thing that Macs makes 
+.DS_Store
+
+# Documents 
+.pdf
+.docx
+.xlsx
+.jpg
+.png
+
 # History files
 .Rhistory
 .Rapp.history

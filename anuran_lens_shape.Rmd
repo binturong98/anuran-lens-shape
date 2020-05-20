@@ -1,0 +1,39 @@
+---
+title: "Lens morphology is influenced by ecology in frogs and toads"
+author: "Amartya Tashi Mitra"
+date: "5/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+
+```
+
+# Loading data and  packages
+
+```{r data , echo = FALSE}
+#install packages
+#install.packages("plotly")
+#install.packages("kableExtra")
+#install.packages("plyr")
+
+#package libraries
+library(cowplot)
+library(ape)
+library(phytools)
+library(geiger)
+library(plyr)
+library(kableExtra)
+library(plotly)
+library(tidyverse)
+library(PMCMR)
+library(PMCMRplus)
+
+#data
+#lens_data <- read.csv("ct_lenses.csv", header=TRUE, na.strings = c("", "NA", " ")) #causing issues with hline
+lens_data <- read.csv("ct_lenses.csv")
+
+```
