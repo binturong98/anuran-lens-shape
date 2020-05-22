@@ -37,3 +37,1436 @@ library(PMCMRplus)
 lens_data <- read.csv("ct_lenses.csv")
 
 ```
+
+
+# Sampling
+
+```{r sampling}
+
+#Number of species and individuals sampled 
+counts <-ddply(lens_data, .(lens_data$family, lens_data$genus, lens_data$species, lens_data$life_stage, lens_data$adult_ecology), nrow)
+names(counts) <- c("Family","Genus","Species", "Stage", "Adult ecology", "Lenses sampled")
+
+#create scrolling RMarkdown table of sampling
+kable(counts[ , c("Family","Genus","Species", "Stage", "Adult ecology", "Lenses sampled")], caption = "Species and sampling effort for CT scan data.") %>%
+  kable_styling(full_width = F) %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  scroll_box(height = "1000px")
+```
+
+
+# Calculating the mean of the right and left lenses
+
+```{r specimen-means of entire dataset}
+
+#calculate mean lens parameters for each specimen
+lens_mean <- lens_data %>%
+  mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
+  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
+  mutate_if(is.character, as.factor) %>% 
+  group_by(specimen_id, genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(volume_mm3, na.rm = TRUE),
+            mean_area = mean(area_mm2, na.rm = TRUE),
+            mean_breadth = mean(breadth_mm, na.rm = TRUE),
+            mean_length = mean(length_mm, na.rm = TRUE),
+            mean_width = mean(width_mm, na.rm = TRUE),
+            mean_flatness = mean(flatness, na.rm = TRUE),
+            mean_anisotropy = mean(anisotropy, na.rm = TRUE),
+            mean_elongation = mean(elongation, na.rm = TRUE),
+            mean_sphericity = mean(sphericity, na.rm = TRUE),
+            n = n()) %>%
+  ungroup() 
+```
+
+# Create subset of species with data for both tadpoles and adults
+
+```{r subset for adult-tadpole matches only}
+
+#make separate dataframes for adults and tadpoles
+tads <- filter(lens_mean, life_stage == "tadpole")
+adults <- filter(lens_mean, life_stage == "adult")
+
+#subset species with no tad/adult match
+unmatch <- c(setdiff(tads$genus_species, adults$genus_species), setdiff(adults$genus_species, tads$genus_species))
+
+#remove unmatched species from dataframe (umatched tad/adult)
+lens_matched_long <- lens_mean %>% 
+  filter(!(genus_species %in% unmatch))
+
+```
+
+```{r subset for adult-tadpole matches in wide format}
+
+#merge tadpole and adult dataframes keeping only matching species
+#do an inner join on the two dataframes based on genus_species
+lens_matched <- inner_join(tads, adults, 
+             by = "genus_species", 
+             suffix = c(".tads", ".adults"))
+
+```
+
+```{r subset for only anura & subseet for only adult anura}
+
+# removing artifical objects and outgroups from the dataset
+anura_mean <- lens_mean %>% 
+  filter(life_stage != "artificial" & life_stage != "outgroup")
+
+# subset with only adults 
+adult_mean <- lens_mean %>% 
+  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole")
+```
+
+# Create dataframe with one row per species, with mean data for tadpoles and adults in separate columns
+
+```{r species-means for anura only in wide format}
+
+#make separate dataframes for adults and tadpoles
+tads <- filter(lens_mean, life_stage == "tadpole")
+adults <- filter(lens_mean, life_stage == "adult")
+
+#find means for replicates of life stage within species
+#calculate mean lens parameters for each specimen
+tads_mean <- tads %>%
+  group_by(genus_species, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
+            mean_area = mean(mean_area, na.rm = TRUE),
+            mean_breadth = mean(mean_breadth, na.rm = TRUE),
+            mean_length = mean(mean_length, na.rm = TRUE),
+            mean_width = mean(mean_width, na.rm = TRUE),
+            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+            mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
+            mean_elongation = mean(mean_elongation, na.rm = TRUE),
+            mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
+            n_specimens = n())
+
+adults_mean <- adults %>%
+  group_by(genus_species, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
+            mean_area = mean(mean_area, na.rm = TRUE),
+            mean_breadth = mean(mean_breadth, na.rm = TRUE),
+            mean_length = mean(mean_length, na.rm = TRUE),
+            mean_width = mean(mean_width, na.rm = TRUE),
+            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+            mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
+            mean_elongation = mean(mean_elongation, na.rm = TRUE),
+            mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
+            n_specimens = n())
+
+#merge tadpole and adult dataframes by species
+species_means <- full_join(tads_mean, adults_mean, 
+             by = "genus_species", 
+             suffix = c(".tads", ".adults"))
+```
+
+```{r subset for eye data in anura only}
+eye_mean <- lens_data %>%
+  mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(life_stage == c("adult", "tadpole"))  %>% 
+  group_by(specimen_id, genus_species, life_stage, adult_ecology, activity_period) %>%
+  summarise(mean.eye.diameter = mean(eye_diameter_mm, na.rm = TRUE),
+            mean.axial.length = mean(axial_length_mm, na.rm = TRUE),
+            mean.lens.retina.length = mean(lens_to_retina_mm, na.rm = TRUE),
+            mean.lens.diameter = mean(lens_diameter_mm, na.rm = TRUE),
+            mean.lens.depth = mean(lens_depth_mm, na.rm = TRUE),
+            n = n())
+
+#convert NaN values to NA 
+eye_mean[eye_mean == "NaN"] <- NA
+
+# subsetting for adults 
+adult_eye <- eye_mean %>%
+  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole") %>%
+  mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter)
+```
+
+```{r subset to dataframe for repeat measures}
+
+lens_repeat <- lens_data %>%
+filter(life_stage == "repeat" & specimen_id != "USNM299711")
+  
+```
+
+# Import a published phylogeny and match to dataset
+
+```{r phylo-import, fig.height = 15, fig.width=7}
+
+### Phylogeny names ###
+
+#Import phylogeny from Jetz and Pyron 2019
+tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
+
+#Pull out tip labels from tree
+tips <- as.vector(tree_orig$tip.label)
+
+#Make a dataframe with tip vector as a column called "phylo_names"
+phylo_names <- as.data.frame(tips, optional = TRUE, stringsAsFactors = FALSE)
+colnames(phylo_names) <- "species_phylo"
+
+#make ID column to match with data later
+phylo_names$ID <- phylo_names$species_phylo
+
+### Dataset names ###
+
+#make ID column in dataset dataframe 
+lens_species <- species_means %>% #dataframe with all species and life stages
+  mutate(adult_samp = if (is.na(n_specimens.adults)) {"no"} else {"yes"}, 
+         tad_samp = if (is.na(n_specimens.tads)) {"no"} else {"yes"}) %>% #adds binary yes/no for adult and tadpole sampling
+  mutate(ID = str_to_sentence(genus_species)) %>% #capitalizes genus to match tip label format
+  ungroup()
+
+### Match data species names with phylogeny ###
+
+#use a left join in dplyr to match phylo tips to dataset species names
+lens_phylo_data <- lens_species %>%
+  left_join(phylo_names, by = "ID")
+
+#show species from dataset that aren't matching to the phylogeny
+missing <- lens_phylo_data %>%
+  filter(is.na(species_phylo)) %>%
+  select(ID)
+missing
+
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+lens_phylo_data[lens_phylo_data$ID=="Hypsiboas_geographica", "species_phylo"] <- "Hypsiboas_geographicus"
+lens_phylo_data[lens_phylo_data$ID=="Chiasmocleis_hudsoni", "species_phylo"] <- "Syncope_hudsoni"
+lens_phylo_data[lens_phylo_data$ID=="Rhombophryne_nilevina", "species_phylo"] <- "Rhombophryne_alluaudi"
+
+### Pruning a phylogeny to match the species in your dataset ###
+
+#make list of taxa to drop (in tree but not in dataset)
+drops <- setdiff(tree_orig$tip.label, lens_phylo_data$species_phylo)
+
+#drop unwanted tips from phylogeny
+tree.pruned <- drop.tip(phy = tree_orig, tip = drops) 
+
+#see which tips you've kept in your phylogeny
+tree.pruned$tip.label
+
+#check that phylogeny tips and data match exactly (if they match will return "OK")
+name.check(tree.pruned, lens_phylo_data$species_phylo)
+
+#check and reorder tree
+is.rooted(tree.pruned) #tests whether tree is rooted (want it to return "TRUE") 
+is.binary.tree(tree.pruned) #tests whether tree is dichotomous (no polytomies)
+
+#make tree dichotomous
+tree.pruned <- multi2di(tree.pruned)
+
+#rename tip labels from phylogeny to our species names (from ASotW)
+tree.pruned$tip.label <- lens_phylo_data[["ID"]][match(tree.pruned$tip.label, lens_phylo_data[["species_phylo"]])]
+
+#check that phylogeny tips and data match exactly (if they match will return "OK")
+name.check(tree.pruned, lens_phylo_data$ID)
+
+#rename 
+lens.tree <- ladderize(tree.pruned) #ladderizes tree
+
+#resort trait dataset to the order of tree tip labels
+rownames(lens_phylo_data) <- lens_phylo_data$ID
+lens_phylo_data <- lens_phylo_data[lens.tree$tip.label, ] 
+
+#plot your beautiful phylogeny
+plot.phylo(lens.tree, #phylogeny to plot
+           type = "phylogram", #how to visualize phylogeny
+           show.tip.label = TRUE, #whether to show tip labels/species names
+           cex = 1.0, #text size
+           no.margin = TRUE, 
+           use.edge.length = TRUE,
+           edge.width = 1.5, #thickness of phylogeny branches
+           label.offset = 3) #how far away from tips to put labels
+ 
+```
+
+# Data visualisation
+
+```{r plot - variation in shape metrics for entire dataset}
+
+#put specimen data into long format for plotting
+value <- anura_mean$mean_anisotropy
+stage <- anura_mean$life_stage
+metric <- "anisotropy"
+
+shape1 <- data.frame(metric, value, stage)
+
+value <- anura_mean$mean_flatness
+stage <- anura_mean$life_stage
+metric <- "flatness"
+shape2 <- data.frame(metric, value, stage)
+
+value <- anura_mean$mean_sphericity
+stage <- anura_mean$life_stage
+metric <- "sphericity"
+shape3 <- data.frame(metric, value, stage)
+
+value <- anura_mean$mean_elongation
+stage <- anura_mean$life_stage
+metric <- "elongation"
+shape4 <- data.frame(metric, value, stage)
+
+shape.final <- rbind(shape1, shape2, shape3, shape4)
+
+# extract artificial objects from raw dataset
+objects <- lens_data %>%
+  filter(life_stage == "artificial")
+
+# make same long form dataset for objects
+value <- objects$anisotropy
+type <- objects$specimen_id
+metric <- "anisotropy"
+
+shape1 <- data.frame(metric, value, type)
+
+value <- objects$flatness
+type <- objects$specimen_id
+metric <- "flatness"
+shape2 <- data.frame(metric, value, type)
+
+value <- objects$sphericity
+type <- objects$specimen_id
+metric <- "sphericity"
+shape3 <- data.frame(metric, value, type)
+
+value <- objects$elongation
+type <- objects$specimen_id
+metric <- "elongation"
+shape4 <- data.frame(metric, value, type)
+
+object.final <- rbind(shape1, shape2, shape3, shape4)
+
+#make plot
+shape.plot <- ggplot(data = shape.final,
+                    aes(x = metric, y = value)) +
+  geom_violin(notch = FALSE, outlier.shape = NA) + #controls boxes
+  geom_jitter(aes(col = stage), shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+    stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Shape Metric") +
+  ylab("Value") +
+  geom_jitter(data = object.final, aes(x = metric, y = value, shape = type), position = position_jitter(0))
+
+shape.plot
+```
+## Lens shape parameters for tadpoles vs. adults
+
+### Comparing flatness between life stages. 
+Flat objects have a flatness of 0
+
+```{r life stage ~ flatness, fig.height=6, fig.width=8}
+
+#create ggplot object
+plot_flat <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"), #removes outgroups, artifical objects
+                    aes(x = life_stage, y = mean_flatness, fill = life_stage)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Life Stage") +
+  ylab("Flatness")  +
+ geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+ggplotly(plot_flat)
+# > p1 + scale_fill_brewer(palette="Set1") ## for colour-blind friendly colour palette 
+```
+
+### Comparing sphericity between life stages.
+Spheres have a sphericity of 1
+
+```{r life stage ~ sphericity}
+
+plot_sphericity <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = life_stage, y = mean_sphericity, fill = life_stage)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Life Stage") +
+  ylab("Sphericity") +
+ geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+ggplotly(plot_sphericity)
+```
+
+### Comparing anisotropy between life stages.
+Spherical objects have an anisotropy of 0
+
+```{r life stage ~ anisotropy}
+
+plot_anisotropy <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = life_stage, y = mean_anisotropy, fill = life_stage)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Life Stage") +
+  ylab("Anisotropy") +
+ geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+ geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+ggplotly(plot_anisotropy)
+```
+
+### Comparing elongation between life stages.
+Elongated objects have an elongation of 0
+
+```{r life stage ~ elongation}
+
+plot_elongation <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = life_stage, y = mean_elongation, fill = life_stage)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Life Stage") +
+  ylab("Elongation") +
+  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") + 
+ geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype = "dashed")
+
+ggplotly(plot_elongation)
+```
+To increase size of axis titles :
+theme(axis.title = element_text(face = "bold", size = 20)) 
+
+To increase size of axis text :
+theme(axis.text = element_text(size = 20)) 
+
+### Figure for comparing shape across life stages
+
+```{r Figure 6, fig.height=8, fig.width=8}
+
+#make panels 
+fig.c <- plot_sphericity +
+  
+  theme(legend.position = "none") +
+  xlab("")
+
+fig.b <- plot_flat +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.a <- plot_anisotropy +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.d <- plot_elongation +
+theme(legend.position = "none") +
+  xlab("")
+
+# extract legend from one figure
+leg <- get_legend(plot_sphericity + theme(legend.position = "right"))
+
+#use cowplot package to nicely plot the graphs together with a shared common legend.
+plots <- plot_grid(fig.a, NULL, fig.b, NULL, fig.c, NULL, fig.d, 
+                   #list of plots to arrange in grid
+                   rel_widths = c(1, 0.2, 1, 0.2, 1), #widths of panels
+                   labels = c("A", "", "B", "", "C", "", "D"), #panel labels for figure
+                   hjust = -1, #adjustment for panel labels
+                   nrow = 2) #number of rows in grid (use ncol = # for specifying columns instead)
+
+#construct full figure with panels and legend
+#use ncol and rel_widths for columns, use nrow and rel_heights for rows
+plot_grid(plots, leg, ncol = 3, rel_widths = c(1, 0.1), align = 'vh') 
+
+#in this case though, you don't need a legend since your x categories are labelled already, so I will use the previous version that didn't add the legend
+plot_grid(plots)
+
+#before the below code will work, make a folder called "Figures" in the same place as your Rproject and Rmarkdown file. Don't upload/sync the folder with github, just leave it locally (images too big for github to handle lots of versions)
+
+#export figure as a pdf to a specified size
+pdf("Figures/Figure_6.pdf", width = 14, height = 10) 
+plot_grid(plots)
+dev.off()
+```
+
+## Tadpole-adult matches
+
+```{r calculataing relative percentage change in lens shape - life stages}
+
+relative_change <- lens_matched %>%
+  filter(specimen_id.tads != "BMNH1906.8.30.62") %>%
+  mutate(change_anisotropy = (mean_anisotropy.adults - mean_anisotropy.tads)/mean_anisotropy.tads *100,
+         change_flatness = (mean_flatness.adults - mean_flatness.tads)/mean_flatness.tads *100,
+         change_sphericity = (mean_sphericity.adults - mean_sphericity.tads)/mean_sphericity.tads *100)
+```
+
+```{r bar plot: relative percentage change: anisotropy ~ life stage, group = ecology}
+aniso_change_bar <- ggplot(data = relative_change,
+                    aes(x = adult_ecology.adults, y = change_anisotropy, 
+                        fill = adult_ecology.adults)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line =   
+  element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Relative Change in Anisotropy") +
+  scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"),
+                    name = "Adult Ecology")
+  # theme(axis.text.x = element_text(angle = 90, hjust = 1)) - for vertical text
+aniso_change_bar
+```
+
+```{r boxplot: relative percentage change: anisotropy  ~ life stage, group = ecology}
+aniso_change_box <- ggplot(data = relative_change,
+                    aes(x = adult_ecology.adults, y = change_anisotropy, fill = adult_ecology.adults)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Relative change in anisotropy")
+
+ggplotly(aniso_change_box)
+```    
+       
+```{r paired boxplot: flatness ~ tadpoles, adults, group = ecology}       
+
+flat_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = adult_ecology, y = mean_flatness, fill = life_stage),
+                    position = position_dodge(0.8)) +# control space between box plots
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  #stat_summary(fun.y = mean, colour="black", geom="point", 
+  #             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  stat_summary(fun.y = mean, colour="black", geom="point", position=position_dodge(width=0.8),             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  #geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot - this was the culprit!
+  geom_point(position=position_jitterdodge(), alpha=0.5) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Ecology") +
+  ylab("Flatness") +
+  labs(fill = "Life Stage") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+flat_box_pair
+
+```
+
+```{r paired boxplot: anisotropy ~ tadpoles, adults, group = ecology}       
+aniso_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = adult_ecology, y = mean_anisotropy, fill = life_stage),
+                    position = position_dodge(0.8)) +# control space between box plots
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  #stat_summary(fun.y = mean, colour="black", geom="point", 
+  #             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  stat_summary(fun.y = mean, colour="black", geom="point", position=position_dodge(width=0.8),             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  #geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot - this was the culprit!
+  geom_point(position=position_jitterdodge(), alpha=0.5) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Ecology") +
+  ylab("Anisotropy") +
+  labs(fill = "Life Stage") +
+  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+aniso_box_pair
+
+```
+
+```{r paired boxplot: sphericity ~ tadpoles, adults, group = ecology}       
+spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = adult_ecology, y = mean_sphericity, fill = life_stage),
+                    position = position_dodge(0.8)) +# control space between box plots
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  #stat_summary(fun.y = mean, colour="black", geom="point", 
+  #             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  stat_summary(fun.y = mean, colour="black", geom="point", position=position_dodge(width=0.8),             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  #geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot - this was the culprit!
+  geom_point(position=position_jitterdodge(), alpha=0.5) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Ecology") +
+  ylab("Sphericity") +
+  labs(fill = "Life Stage") +
+  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+spher_box_pair
+
+```
+
+```{r paired boxplot: elongation ~ tadpoles, adults, group = ecology}       
+
+elong_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+                    aes(x = adult_ecology, y = mean_elongation, fill = life_stage),
+                    position = position_dodge(0.8)) +# control space between box plots
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  #stat_summary(fun.y = mean, colour="black", geom="point", 
+  #             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  stat_summary(fun.y = mean, colour="black", geom="point", position=position_dodge(width=0.8),             shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  #geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot - this was the culprit!
+  geom_point(position=position_jitterdodge(), alpha=0.5) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Ecology") +
+  ylab("Elongation") +
+  labs(fill = "Life Stage") +
+  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+
+elong_box_pair
+
+```
+
+```{r Figure 7, fig.height=8, fig.width=8}
+
+
+fig.a <- aniso_box_pair +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.b <- flat_box_pair +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.c <- spher_box_pair +
+  theme(legend.position = "none") +
+  xlab("")
+
+fig.d <- elong_box_pair +
+  theme(legend.position = "none") +
+  xlab("")
+
+#use cowplot package to nicely plot the graphs together with a shared common legend.
+plots <- plot_grid(fig.a, NULL, fig.b, NULL, fig.c, NULL, fig.d, 
+                   #list of plots to arrange in grid
+                   rel_widths = c(2.25, 0.2, 2.25, 0.2, 2.25), #widths of panels
+                   labels = c("A", "", "B", "", "C", "", "D"), #panel labels for figure
+                   hjust = -1, #adjustment for panel labels
+                   nrow = 2)
+
+#in this case though, you don't need a legend since your x categories are labelled already, so I will use the previous version that didn't add the legend
+plot_grid(plots)
+
+#export figure as a pdf to a specified size
+pdf("Figures/Figure_7.pdf", width = 16, height = 9) 
+plot_grid(plots)
+dev.off()
+```
+
+## Lens shape parameters for adults
+
+### Habitat
+
+Collapsing "ground_dwelling", "subfossorial" and "scansorial" into a single category "terrestrial"
+
+```{r adults: coarse ecology ~ flatness}
+plot_flat_2 <- ggplot(data = filter(anura_mean, life_stage != "tadpole", specimen_id != "DG_frog_1_01"),
+                    aes(x = adult_ecology_2, y = mean_flatness, fill = adult_ecology_2)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Flatness") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Prolate_spheroid"]), linetype = "dotted") + 
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Oblate_spheroid"]), linetype = "dashed") + 
+ geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype = "dotdash")
+
+ggplotly(plot_flat_2)
+```
+
+
+Comparison of traits assigned using trait coding key - Table 1
+
+```{r adults: ecology ~ flatness}
+
+adult_mean_eco <- adult_mean %>% 
+  filter(adult_ecology != "unknown")
+
+plot_flat_eco <- ggplot(data = adult_mean_eco,
+                    aes(x = adult_ecology, y = mean_flatness, fill = adult_ecology)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Flatness") +
+ geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
+
+ggplotly(plot_flat_eco) 
+```
+
+```{r adults: ecology ~ anisotropy}
+
+plot_aniso_eco <- ggplot(data = adult_mean_eco,
+                    aes(x = adult_ecology, y = mean_anisotropy, fill = adult_ecology)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Anisotropy") +
+  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
+
+ggplotly(plot_aniso_eco) 
+```
+
+```{r adults: ecology ~ sphericity}
+plot_spher_eco <- ggplot(data = adult_mean_eco,
+                    aes(x = adult_ecology, y = mean_sphericity, fill = adult_ecology)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Sphericity") +
+  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
+
+ggplotly(plot_spher_eco) 
+```
+
+```{r adults: ecology ~ elongation}
+plot_elong_eco <- ggplot(data = adult_mean_eco,
+                    aes(x = adult_ecology, y = mean_elongation, fill = adult_ecology)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Elongation") +
+ geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
+
+ggplotly(plot_elong_eco) 
+```
+
+```{r Figure 8, fig.height=8, fig.width=8}
+
+#make panels 
+fig.a <- plot_aniso_eco +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.b <- plot_flat_eco +
+theme(legend.position = "none") +
+  xlab("")
+
+fig.c <- plot_spher_eco +
+  theme(legend.position = "none") +
+  xlab("")
+
+fig.d <- plot_elong_eco +
+  theme(legend.position = "none") +
+  xlab("")
+
+#use cowplot package to nicely plot the graphs together with a shared common legend.
+plots <- plot_grid(fig.a, NULL, fig.b, NULL, fig.c, NULL, fig.d, 
+                   #list of plots to arrange in grid
+                   rel_widths = c(2.25, 0.2, 2.25, 0.2, 2.25), #widths of panels
+                   labels = c("A", "", "B", "", "C", "", "D"), #panel labels for figure
+                   hjust = -1, #adjustment for panel labels
+                   nrow = 2)
+
+
+#in this case though, you don't need a legend since your x categories are labelled already, so I will use the previous version that didn't add the legend
+plot_grid(plots)
+
+#export figure as a pdf to a specified size
+pdf("Figures/Figure_8.pdf", width = 16, height = 9) 
+plot_grid(plots)
+dev.off()
+```
+
+
+### Activity Pattern
+
+```{r adults: flatness ~ activity period}
+
+lens_mean_ap <- lens_mean %>%
+  filter(activity_period != "" & activity_period != "unknown")
+
+flat_ap <- ggplot(data = filter(lens_mean_ap, life_stage != "outgroup", life_stage != "tadpole", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica", activity_period != "unknown"),
+                        aes(x = activity_period, y = mean_flatness, fill = activity_period)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Activity Period") +
+  ylab("Flatness") 
+ggplotly(flat_ap)
+
+```
+
+# Relative Lens Size
+
+```{r lm: lens size ~ eye size}
+
+#subset observations that have lens and eye size data
+lens_size <- eye_mean %>%
+  filter(!(is.na(mean.lens.diameter) | is.na(mean.eye.diameter)))
+
+#model for allometric scaling of lens diameter with eye diameter
+lens.eye_fit <- lm(formula = log10(mean.lens.diameter) ~ log10(mean.eye.diameter), data = lens_size)
+
+#plot fit, residuals, qq
+par(mfrow = c(2,2)) #makes your plot window into 2x2 panels
+plot(lens.eye_fit)
+par(mfrow = c(1,1)) #set plotting window back to one plot
+
+#model summary
+summary(lens.eye_fit)
+
+#add residuals of model as column in eye_mean dataframe
+lens_size$lens_res <- lens.eye_fit$residuals
+
+#make plot
+lens.eye.plot <- ggplot(data = lens_size,
+                       aes(y = mean.lens.diameter, x = mean.eye.diameter, colour = life_stage, text = genus_species)) +
+  geom_point() + #controls boxes
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line =          element_line(colour = "black")) + #controls background
+  scale_x_log10("Eye diameter (mm)") +
+  scale_y_log10("Lens diameter (mm)") +
+  geom_abline(slope = coef(lens.eye_fit)[[2]], intercept = coef(lens.eye_fit)[[1]], linetype   = "solid") + labs(colour = "Life Stage")
+
+#interactive plot
+ggplotly(lens.eye.plot)
+
+```
+
+
+```{r adults: relative lens size ~ activity period}
+
+#subset only data with activity pattern known
+lens_size_ap <- lens_size %>%
+  filter(activity_period != "" & activity_period != "unknown" & life_stage != 'tadpole')
+
+#make boxplot
+rel.size.ap <- ggplot(data = lens_size_ap,
+                    aes(x = activity_period, y = lens_res, fill = activity_period)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.7) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Activity Pattern") +
+  ylab("Lens Size Relative to Eye Size") +
+  scale_fill_manual(values=c("#DDDDDD", "#DDCC77", "#332288"))
+
+ggplotly(rel.size.ap)
+
+```
+
+```{r adults: relative lens size ~ ecology}
+
+lens_size_adult <- lens_size %>%
+  filter(adult_ecology != "unknown", life_stage != "tadpole")
+
+#make boxplot
+rel.size.eco <- ggplot(data = lens_size_adult,
+                    aes(x = adult_ecology, y = lens_res, fill = adult_ecology)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Adult Ecology") +
+  ylab("Lens Size Relative to Eye Size") +
+scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
+
+ggplotly(rel.size.eco)
+```
+
+```{r Figure 9, fig.height=8, fig.width=8}
+
+plots <- plot_grid(lens.eye.plot, rel.size.ap, rel.size.eco, 
+                    labels = c("A", "B", "C"), #panel labels for figure
+                    hjust = -1, #adjustment for panel labels
+                    nrow = 3) #number of rows in grid (use ncol = # for specifying columns
+# For three panel plot with spaces
+
+
+#in this case though, you don't need a legend since your x categories are labelled already, so I will use the previous version that didn't add the legend
+plot_grid(plots)
+
+#export figure as a pdf to a specified size
+pdf("Figures/Figure_9.pdf", width = 9, height = 15) 
+plot_grid(plots)
+dev.off()
+```
+
+
+# Comparing lens shape metrics for correlation
+
+Anisotropy decreases linearly with increasing flatness
+
+```{r lm: anisotropy ~ flatness}
+
+aniso.flat <- lm(mean_anisotropy ~ mean_flatness, data = anura_mean)
+summary(aniso.flat)
+
+aniso.flat.plot <- ggplot(data = anura_mean,
+                    aes(y = mean_anisotropy, x = mean_flatness)) +
+  geom_point() +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Flatness") +
+  ylab("Anisotropy") +
+  geom_abline(slope = coef(aniso.flat)[[2]], intercept = coef(aniso.flat)[[1]], linetype   = "solid")
+aniso.flat.plot
+```
+
+```{r lm: anisotropy ~ sphericity}
+
+aniso.spher <- lm(mean_anisotropy ~ mean_sphericity, data = anura_mean)
+summary(aniso.spher)
+
+```
+
+```{r lm: anisotropy ~ elongation}
+
+aniso.elong <- lm(mean_anisotropy ~ mean_elongation, data = anura_mean)
+summary(aniso.elong)
+
+```
+
+```{r lm: flatness ~ elongation}
+
+flat.elong <- lm(mean_flatness ~ mean_elongation, data = anura_mean)
+summary(flat.elong)
+
+```
+
+```{r lm: flatness ~ sphericity}
+
+flat.spher <- lm(mean_flatness ~ mean_sphericity, data = anura_mean)
+summary(flat.spher)
+
+```
+
+```{r lm: sphericity ~ elongation}
+
+spher.elong <- lm(mean_sphericity ~ mean_elongation, data = anura_mean)
+summary(spher.elong)
+
+```
+
+```{r volume ~ shape metrics}
+vol_aniso <- ggplot(data = anura_mean,
+                aes(x = mean_anisotropy, y = mean_volume)) +
+  geom_point() +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Anisotropy") +
+  ylab("Volume") 
+ggplotly(vol_aniso)
+
+vol_flat <- ggplot(data = anura_mean,
+               aes(x = mean_flatness, y = mean_volume)) +
+  geom_point() +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Flatness") +
+  ylab("Volume") 
+ggplotly(vol_flat)
+
+vol_spher <- ggplot(data = anura_mean,
+                aes(x = mean_sphericity, y = mean_volume)) +
+  geom_point() +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Sphericity") +
+  ylab("Volume") 
+ggplotly(vol_spher)
+
+vol_elong <- ggplot(data = anura_mean,
+                aes(x = mean_elongation, y = mean_volume)) +
+  geom_point() +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Elongation") +
+  ylab("Volume") 
+ggplotly(vol_elong)
+
+```
+
+
+```{r 3d plot: flatness, anisotropy, sphericity, group = ecology}
+plot3d <- plot_ly(lens_mean, 
+                  x = ~ mean_flatness, 
+                  y = ~ mean_sphericity,
+                  z = ~ mean_anisotropy,
+                  color = ~ adult_ecology_2,
+                  type = 'scatter3d', 
+                  mode = 'markers',
+                  text = ~genus_species) %>%
+  layout(scene = list(xaxis = list(title = 'Flatness'), 
+					  yaxis = list(title = 'Sphericity'), 
+					  zaxis = list(title = 'Anisotropy'))) 
+
+ggplotly(plot3d)
+```
+
+
+
+```{r 3d plot: flatness, anisotropy, sphericity, group = life stage}
+plot3d <- plot_ly(lens_mean, 
+                  x = ~ mean_flatness, 
+                  y = ~ mean_sphericity,
+                  z = ~ mean_anisotropy,
+                  color = ~ life_stage,
+                  type = 'scatter3d', 
+                  mode = 'markers',
+                  text = ~genus_species) %>%
+  layout(scene = list(xaxis = list(title = 'Flatness'), 
+					  yaxis = list(title = 'Sphericity'), 
+					  zaxis = list(title = 'Anisotropy'))) 
+
+ggplotly(plot3d)
+```
+       
+# Data Analysis      
+
+## PCA
+```{r PCA analysis}       
+
+#dimension conversion
+row.names(anura_mean) <- paste(anura_mean$life_stage, row.names(anura_mean), sep="_") 
+anura_mean$life_Stage <- NULL
+
+# running PCA on tadpoles and adults with flatness, anisotropy, elongation and sphericity values
+lens.pca <- prcomp(anura_mean[,12:15], center = TRUE, scale. = TRUE)
+
+# summary stats
+summary(lens.pca)
+
+str(lens.pca)
+
+# eigenvectors
+lens.pca$rotation
+
+# eigenvalues 
+(lens.pca$sdev)^2
+
+#plot directly
+plot(lens.pca$x[,1], lens.pca$x[,2])
+```
+
+I'm not including volume in the PCA because since it's not correlated with the other variables (as seen in chunk 17). Inclusion may thus introduce noise
+
+From summary - proportion of variance values, PC1 explains 59% of the total variance, which means that nearly two-thirds of the variation in the dataset can be encapsulated by just that one principal component. PC2 explains 25% of the variance. Just PC1 and PC2 can explain 84% of the variance. PC3 explains 14% and PC4 only explains 0.013% of the variance.
+
+From eigenvector values - low values of PC1 are associated with high values of mean flatness (loading: -0.62), mean anisotropy (loading: -0.62). Low values of PC1 are a little less associated with sphericity (loading: -0.48). 
+PC2, however is largely associated with mean_elongation (loading: -0.97). However, PC2 explains the same amount of variance (25%) as any of the given variables alone. Since the total variance is 4, each variable alone would also explain 25% of the variance. 
+
+```{r pca - adults + tadpoles}
+
+#put PCA results into dataframe format
+df_pca <- as.data.frame(lens.pca$x) 
+
+#add a group column by breaking apart the rownames from the original dataframe
+df_pca$group <- sapply(strsplit(as.character(row.names(anura_mean)), "_"),  "[", 1)
+
+#extract loadings of the variables
+pca_loadings <- data.frame(Variables = rownames(lens.pca$rotation), lens.pca$rotation)
+
+#make ggpolot of results
+plot_pca <- ggplot(df_pca, 
+                   aes(x = PC1, y = PC2, color = group)) +
+  geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = (PC1*4), # adds arrows - eigenvectors
+                                        yend = (PC2*4)), arrow = arrow(length = unit(1/2, "picas")),
+               color = "black") +
+  geom_point() + 
+  # annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) adds eigenvector labels. Not using in this case because too hard to position
+  stat_ellipse(aes(x=PC1, y=PC2), type = "norm") + # adds elliptical clusters
+       xlab("PC 1 (59.43%)") + 
+  
+     ylab("PC 2 (26.02%)") +
+  
+     theme_minimal() +
+    
+     theme(panel.grid = element_blank(), 
+          
+           panel.border = element_rect(fill= "transparent"))
+
+plot_pca
+                                                       
+#show plot
+plot_pca
+```
+
+## Tadpoles vs Adults
+
+```{r independent t-test: all tadpoles, all adults}
+
+# unequeal variances therefore welch two sample t-test 
+t.test(species_means$mean_flatness.tads, species_means$mean_flatness.adults)
+# p = 2.2e-16 ***
+
+t.test(species_means$mean_anisotropy.tads, species_means$mean_anisotropy.adults)
+# p = 2.2e-16 ***
+
+t.test(species_means$mean_sphericity.tads, species_means$mean_sphericity.adults)
+# p = 9.623e-11 ***
+
+t.test(species_means$mean_elongation.tads, species_means$mean_elongation.adults)
+# p = 0.8704
+
+```
+
+
+```{r paired t-test: tadpole-adult matches}
+
+# Paired t-test is appropriate as its only assumption is that the differences between the two groups are normally distributed. Not that they observations within a group are normally distributed 
+
+# alternative hypothesis: true difference in means is not equal to 0
+
+t.test(lens_matched$mean_flatness.tads, lens_matched$mean_flatness.adults, paired = TRUE)
+
+# p = 1.223e-13 ***
+
+t.test(lens_matched$mean_anisotropy.tads, lens_matched$mean_anisotropy.adults, paired = TRUE)
+# p = 2.447e-12 ***
+
+t.test(lens_matched$mean_sphericity.tads, lens_matched$mean_sphericity.adults, paired = TRUE)
+# p = 4.342e-06 ****
+
+t.test(lens_matched$mean_elongation.tads, lens_matched$mean_elongation.adults, paired = TRUE)
+# p = 0.7721
+
+# we are using parametric instead of non-parametric tests because the result is the same.
+```
+
+## Tadpole-Adult Matches
+
+```{r ANOVA: change in lens shape ~ ecology}
+
+# Calculating difference in lens shape parameters 
+
+lens_matched <- lens_matched %>%
+  filter(specimen_id.tads != "BMNH1906.8.30.62") %>%
+  mutate(change.anisotropy = mean_anisotropy.tads - mean_anisotropy.adults,
+         change.flatness = mean_flatness.tads - mean_flatness.adults,
+         change.sphericity = mean_sphericity.tads - mean_sphericity.adults,
+         change.elongation = mean_elongation.tads - mean_elongation.adults)
+
+# Running ANOVA
+
+flat.change.aov <- aov(change.flatness ~ adult_ecology.adults, data = lens_matched)
+summary(flat.change.aov)
+# p = 4.45e-06 ***
+
+TukeyHSD(flat.change.aov)
+
+aniso.change.aov <- aov(change.anisotropy ~ adult_ecology.adults, data = lens_matched)
+summary(aniso.change.aov)
+# p = 6.5e-07 ***
+
+TukeyHSD(aniso.change.aov)
+
+spher.change.aov <- aov(change.sphericity ~ adult_ecology.adults, data = lens_matched)
+summary(spher.change.aov)
+# p = 0.0224 *
+
+TukeyHSD(spher.change.aov)
+
+elong.change.aov <- aov(change.elongation ~ adult_ecology.adults, data = lens_matched)
+summary(elong.change.aov)
+# p = 0.19
+
+```
+
+## Adults
+
+### Habitat
+
+```{r ANOVA + Tukey: adults ~ ecologies}
+
+# removing unknowns for habitat
+
+### Flatness
+flat.eco.aov <- aov(mean_flatness ~ adult_ecology, data = adult_mean_eco)
+summary(flat.eco.aov)
+# p = 5.18e-05 ***
+
+# significant result so post-hoc pairwise comparison
+TukeyHSD(flat.eco.aov)
+
+
+### Anisotropy
+aniso.eco.aov <- aov(mean_anisotropy ~ adult_ecology, data = adult_mean_eco)
+summary(aniso.eco.aov)
+# p = 8.86e-05 ***
+
+TukeyHSD(aniso.eco.aov)
+
+### Sphericity 
+spher.eco.aov <- aov(mean_sphericity ~ adult_ecology, data = adult_mean_eco)
+summary(spher.eco.aov)
+# p = 0.000476 **
+
+TukeyHSD(spher.eco.aov)
+
+### Elongation
+elong.eco.aov <- aov(mean_elongation ~ adult_ecology, data = adult_mean_eco)
+summary(elong.eco.aov)
+# p = 0.14 
+
+# Non parametric test example
+kruskal.test(mean_sphericity ~ adult_ecology, data = adult_mean_eco)
+
+require(PMCMRplus)
+data(adult_mean)
+attach(adult_mean)
+posthoc.kruskal.dunn.test(x=mean_sphericity, g=adult_ecology, p.adjust.method="bonferroni")
+
+```
+
+```{r ANOVA + Tukey: relative lens size ~ ecology}
+
+rel.size.eco.aov <- aov(lens_res ~ adult_ecology, data = lens_size_adult)
+
+summary(rel.size.eco.aov)
+# p = 7.84e-06 ***
+
+TukeyHSD(rel.size.eco.aov)
+
+```
+
+# Activity Period 
+
+```{r ANOVA + Tukey: adult shape metrics ~ activity period}
+
+adult_mean_ap <- adult_mean %>%
+  filter(activity_period != "" & activity_period != "unknown")
+
+aniso.ap.aov <- aov(mean_anisotropy ~ activity_period, data = adult_mean_ap)
+
+summary(aniso.ap.aov)
+# p = 0.111
+
+flat.ap.aov <- aov(mean_flatness ~ activity_period, data = adult_mean_ap)
+
+summary(flat.ap.aov)
+# p = 0.256
+
+spher.ap.aov <- aov(mean_sphericity ~ activity_period, data = adult_mean_ap)
+
+summary(spher.ap.aov)
+# p = 0.401
+
+elong.ap.aov <- aov(mean_elongation ~ activity_period, data = adult_mean_ap)
+
+summary(elong.ap.aov)
+# p = 0.38
+
+
+```
+
+```{r ANOVA + Tukey: relative lens size ~ activity period}
+
+
+rel.size.ap.aov <- aov(lens_res ~ activity_period, data = lens_size_ap)
+
+summary(rel.size.ap.aov)
+# p = 0.02
+
+TukeyHSD(rel.size.ap.aov)
+
+t.test()
+
+```
+
+# Precision of repeat measures
+
+``` {r coefficient of variation: repeat measures}
+
+# The coefficient of variation (CV) is the ratio of the standard deviation to the mean. The higher the coefficient of variation, the greater the level of dispersion around the mean.
+
+lens_repeat %>%
+  group_by(specimen_id) %>%
+  summarise(coef.var.flat = (sd(flatness)/mean(flatness))*100,
+            coef.var.aniso = (sd(anisotropy)/mean(anisotropy))*100,
+            coef.var.spher = (sd(sphericity)/mean(sphericity))*100,
+            coef.var.elong = (sd(elongation)/mean(elongation))*100)
+
+# The coefficients of variation for all the measures are quite low < 10 %
+
+# CVs calculated for the entire dataset show much higer variation so it is okay to use this method 
+anura_mean %>%
+  summarise(coef.var.flat = (sd(mean_flatness)/mean(mean_flatness))*100,
+            coef.var.aniso = (sd(mean_anisotropy)/mean(mean_anisotropy))*100,
+            coef.var.spher = (sd(mean_sphericity)/mean(mean_sphericity))*100,
+            coef.var.elong = (sd(mean_elongation)/mean(mean_elongation))*100)
+
+```
+
+# Phylogenetic distribution of data
+
+## Plot some data onto the phylogeny
+
+### Plotting life stage sampling onto phylogeny
+
+```{r phylo-sampling, fig.height = 15, fig.width = 7}
+
+#create color vector for states
+cols_adult <- c("yes" = "#F8766D", #colored to match your boxplots
+               "no" = "white")
+cols_tad <- c("yes" = "#00BFC4", #colored to match your boxplots
+               "no" = "white")
+
+#plot phylogeny
+plot.phylo(lens.tree, #phylogeny to plot
+           type = "phylogram", #how to visualize phylogeny
+           show.tip.label = TRUE, #whether to show tip labels/species names
+           cex = 1.0, #text size
+           no.margin = TRUE, 
+           use.edge.length = TRUE,
+           edge.width = 1.5, #thickness of phylogeny branches
+           label.offset = 8) #how far away from tips to put labels
+
+#add tip labels for adult sampling
+tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 1) #spacing from phylogeny
+
+#add tip labels for tadpole sampling
+tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 4.5) #spacing from phylogeny
+
+
+#add legend for pupil shape limited to categories we want
+legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
+       col = c("#F8766D", "#00BFC4"), 
+       pch = 19, #shape of labels
+       cex = 1, 
+       box.lty = 0, 
+       title = "Life stage sampling", 
+       title.adj = 0)
+
+#Replot but export as figure
+
+#create pdf file
+pdf(file = "Figures/sampling.pdf", width=8, height=20)
+
+#make plot
+#plot phylogeny
+plot.phylo(lens.tree, #phylogeny to plot
+           type = "phylogram", #how to visualize phylogeny
+           show.tip.label = TRUE, #whether to show tip labels/species names
+           cex = 1.0, #text size
+           no.margin = TRUE, 
+           use.edge.length = TRUE,
+           edge.width = 1.5, #thickness of phylogeny branches
+           label.offset = 10) #how far away from tips to put labels
+
+#add tip labels for adult sampling
+tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 1) #spacing from phylogeny
+
+#add tip labels for tadpole sampling
+tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 6) #spacing from phylogeny
+
+
+#add legend for pupil shape limited to categories we want
+legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
+       col = c("#F8766D", "#00BFC4"), 
+       pch = 19, #shape of labels
+       cex = 1, 
+       box.lty = 0, 
+       title = "Life stage sampling", 
+       title.adj = 0)
+#finish pdf file
+dev.off()
+
+```
+
+### Plotting measurements onto a phylogeny
+
+Here, as an example, I will plot adult lens flatness onto your phylogeny. You can adapt this script to plot any of your traits for adults or tadpoles onto the tree if you want. 
+
+```{r adult-flatness, fig.height = 15, fig.width=8}
+
+# Prep all your data ------
+
+#subset your dataset to include only adults
+lens_phylo_adults <- lens_phylo_data %>%
+  filter(adult_samp == "yes") 
+row.names(lens_phylo_adults) <- lens_phylo_adults$ID
+
+#make list of taxa to drop (in tree but not in adult dataset)
+drops <- setdiff(lens.tree$tip.label, lens_phylo_adults$ID)
+
+#drop unwanted tips from phylogeny
+lens.tree_adult <- drop.tip(phy = lens.tree, tip = drops) 
+
+#check that phylo and data match now (should read "OK")
+name.check(lens.tree_adult, lens_phylo_adults)
+
+#resort trait dataset to the order of tree tip labels
+lens_phylo_adults <- lens_phylo_adults[lens.tree_adult$tip.label, ] 
+
+#make vector of trait of interest (adult lens flatness) - will use to scale bars
+ad_flat <- as.vector(lens_phylo_adults$mean_flatness.adults) 
+
+#add tip label names to vector data
+names(ad_flat) <- lens_phylo_adults$ID
+
+# Assign colors to a vector ------
+
+#define what colors you want for each state
+col_hab <- c("aquatic" = "#0072B2",
+             "fossorial" = "#D55E00", 
+             "ground-dwelling" = "#E69F00",
+             "scansorial" = "#009E73", 
+             "semi-aquatic" = "#56B4E9", 
+             "subfossorial" = "#CC79A7")
+
+#make trait vector of adult habitats - will use to color bars
+ad_habs <- as.vector(lens_phylo_adults$adult_ecology.adults) 
+
+#add tip label names to vector data
+names(ad_habs) <- lens_phylo_adults$ID
+
+#make vector of colors corresponding to phylogeny tips (based on habitat vector)
+tipcols <- unname(col_hab[ad_habs]) 
+
+
+# Plot your data onto the tree --------
+
+#plot tree with lens flatness scaling bars and habitat coloring bars
+plotTree.wBars(lens.tree_adult, ad_flat, #specify phylogeny and vector of data
+               scale = 50, #scales length of bars
+               tip.labels = TRUE, #true to display species names
+               offset = 0.4, #distance between bars and tree
+               ftype = "bi", #font type`
+               fsize = 0.8, #font size
+               col = tipcols) #how to color bars (here tied to habitat)
+
+#add legend for habitat states
+legend(x = "bottomleft",legend = c("Aquatic", "Fossorial", "Ground-dwelling", "Scansorial", "Semiaquatic", "Subfossorial"), pch = 22, pt.cex= 2, pt.bg = col_hab, cex = 1, bty = "n", horiz = F)
+
+#Export figure
+pdf(file = "Figures/phylo-adult-flatness", height=15, width=8)
+plotTree.wBars(lens.tree, ad_flat, #specify phylogeny and vector of data
+               scale = 50, #scales length of bars
+               tip.labels = TRUE, #true to display species names
+               offset = 0.4, #distance between bars and tree
+               ftype = "bi", #font type
+               fsize = 0.8, #font size
+               col = tipcols) #how to color bars (here tied to habitat)
+legend(x = "bottomleft", legend = c("Aquatic", "Fossorial", "Ground-dwelling", "Scansorial", "Semiaquatic", "Subfossorial"), pch = 22, pt.cex= 2, pt.bg = col_hab, cex = 1, bty = "n", horiz = F)
+dev.off()
+
+# This plot is useful because it shows that there isn't any phologenetic signal. And that certain groups do not have more flat or round lenses.
+
+```
