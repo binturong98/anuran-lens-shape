@@ -4,7 +4,7 @@ author: "Amartya Tashi Mitra"
 date: "May 2020"
 output:
   html_document:
-    theme: cerulean
+    theme: flatly
     toc: TRUE
     toc_float: TRUE
     code_fold: hide
@@ -195,32 +195,11 @@ filter(life_stage == "repeat" & specimen_id != "USNM299711")
 ```
 
 
-# Sampling
-
-We measured lens shape in 176 specimens from 42 families. 
-
-```{r sampling}
-
-#Number of species and individuals sampled 
-counts <-ddply(lens_data, .(lens_data$family, lens_data$genus, lens_data$species, lens_data$life_stage, lens_data$adult_ecology, lens_data$activity_period), nrow)
-names(counts) <- c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")
-
-#Remove artificial shapes
-counts <- counts %>% filter(Stage != "artificial")
-
-#Create scrolling RMarkdown table of sampling
-kable(counts[ , c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")], caption = "Species and sampling effort for CT scan data.") %>%
-  kable_styling(full_width = F) %>%
-  collapse_rows(columns = 1, valign = "top") %>%
-  scroll_box(height = "1000px")
-```
-
-
 # Phylogeny
 
 We imported a published molecular and taxonomy-based phylogeny from Jetz and Pyron (2018) and pruned it to match the species in our dataset. 
 
-```{r phylo-import, fig.height = 15, fig.width=7}
+```{r phylo-import, fig.height = 18, fig.width=7, results = FALSE}
 
 # Phylogeny import and names -----
 
@@ -314,11 +293,120 @@ plot.phylo(lens.tree, #phylogeny to plot
 ```
 
 
-***
-***
+
+# Sampling
+
+We measured lens shape in 176 specimens from 42 families. 
+
+## Sampling summary
+
+```{r sampling}
+
+#Number of species and individuals sampled 
+counts <-ddply(lens_data, .(lens_data$family, lens_data$genus, lens_data$species, lens_data$life_stage, lens_data$adult_ecology, lens_data$activity_period), nrow)
+names(counts) <- c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")
+
+#Remove artificial shapes
+counts <- counts %>% filter(Stage != "artificial")
+
+#Create scrolling RMarkdown table of sampling
+kable(counts[ , c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")], caption = "Species and sampling effort for CT scan data.") %>%
+  kable_styling(full_width = F) %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  scroll_box(height = "1000px")
+```
+
+
+## Phylogenetic distribution of sampling
+
+```{r phylo-sampling, fig.height = 18, fig.width = 9, results="hide"}
+
+#create color vector for states
+cols_adult <- c("yes" = "#F8766D", #colored to match your boxplots
+               "no" = "white")
+cols_tad <- c("yes" = "#00BFC4", #colored to match your boxplots
+               "no" = "white")
+
+#plot phylogeny
+plot.phylo(lens.tree, #phylogeny to plot
+           type = "phylogram", #how to visualize phylogeny
+           show.tip.label = TRUE, #whether to show tip labels/species names
+           cex = 1.0, #text size
+           no.margin = TRUE, 
+           use.edge.length = TRUE,
+           edge.width = 1.5, #thickness of phylogeny branches
+           label.offset = 8) #how far away from tips to put labels
+
+#add tip labels for adult sampling
+tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 1) #spacing from phylogeny
+
+#add tip labels for tadpole sampling
+tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 4.5) #spacing from phylogeny
+
+
+#add legend for pupil shape limited to categories we want
+legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
+       col = c("#F8766D", "#00BFC4"), 
+       pch = 19, #shape of labels
+       cex = 1, 
+       box.lty = 0, 
+       title = "Life stage sampling", 
+       title.adj = 0)
+
+#Replot but export as figure
+
+#create pdf file
+pdf(file = "Figures/sampling.pdf", width=8, height=20)
+
+#make plot
+#plot phylogeny
+plot.phylo(lens.tree, #phylogeny to plot
+           type = "phylogram", #how to visualize phylogeny
+           show.tip.label = TRUE, #whether to show tip labels/species names
+           cex = 1.0, #text size
+           no.margin = TRUE, 
+           use.edge.length = TRUE,
+           edge.width = 1.5, #thickness of phylogeny branches
+           label.offset = 10) #how far away from tips to put labels
+
+#add tip labels for adult sampling
+tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 1) #spacing from phylogeny
+
+#add tip labels for tadpole sampling
+tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
+          pch = 19, #shape of labels
+          cex = 1, #size of labels
+          adj = 6) #spacing from phylogeny
+
+
+#add legend for pupil shape limited to categories we want
+legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
+       col = c("#F8766D", "#00BFC4"), 
+       pch = 19, #shape of labels
+       cex = 1, 
+       box.lty = 0, 
+       title = "Life stage sampling", 
+       title.adj = 0)
+#finish pdf file
+dev.off()
+
+```
+
+
 ***
 
 # Data visualisation
+
+## Distribution of shape data across full dataset
 
 ```{r plot - variation in shape metrics for entire dataset}
 
@@ -388,9 +476,10 @@ shape.plot <- ggplot(data = shape.final,
 
 shape.plot
 ```
-## Lens shape parameters for tadpoles vs. adults
 
-### Comparing flatness between life stages. 
+## Lens shape parameters for tadpoles vs. adults (full dataset)
+
+### Comparing flatness between life stages
 Flat objects have a flatness of 0
 
 ```{r life stage ~ flatness, fig.height=6, fig.width=8}
@@ -412,7 +501,7 @@ ggplotly(plot_flat)
 # > p1 + scale_fill_brewer(palette="Set1") ## for colour-blind friendly colour palette 
 ```
 
-### Comparing sphericity between life stages.
+### Comparing sphericity between life stages
 Spheres have a sphericity of 1
 
 ```{r life stage ~ sphericity}
@@ -432,7 +521,7 @@ plot_sphericity <- ggplot(data = filter(lens_mean, life_stage != "outgroup", spe
 ggplotly(plot_sphericity)
 ```
 
-### Comparing anisotropy between life stages.
+### Comparing anisotropy between life stages
 Spherical objects have an anisotropy of 0
 
 ```{r life stage ~ anisotropy}
@@ -471,15 +560,11 @@ plot_elongation <- ggplot(data = filter(lens_mean, life_stage != "outgroup", spe
 
 ggplotly(plot_elongation)
 ```
-To increase size of axis titles :
-theme(axis.title = element_text(face = "bold", size = 20)) 
 
-To increase size of axis text :
-theme(axis.text = element_text(size = 20)) 
 
 ### Figure for comparing shape across life stages
 
-```{r Figure 6, fig.height=8, fig.width=8}
+```{r Figure 6, fig.height=8, fig.width=8, results = "hide"}
 
 #make panels 
 fig.c <- plot_sphericity +
@@ -511,10 +596,6 @@ plots <- plot_grid(fig.a, NULL, fig.b, NULL, fig.c, NULL, fig.d,
                    nrow = 2) #number of rows in grid (use ncol = # for specifying columns instead)
 
 #construct full figure with panels and legend
-#use ncol and rel_widths for columns, use nrow and rel_heights for rows
-plot_grid(plots, leg, ncol = 3, rel_widths = c(1, 0.1), align = 'vh') 
-
-#in this case though, you don't need a legend since your x categories are labelled already, so I will use the previous version that didn't add the legend
 plot_grid(plots)
 
 #before the below code will work, make a folder called "Figures" in the same place as your Rproject and Rmarkdown file. Don't upload/sync the folder with github, just leave it locally (images too big for github to handle lots of versions)
@@ -525,7 +606,15 @@ plot_grid(plots)
 dev.off()
 ```
 
-## Tadpole-adult matches
+
+
+# Comparing life stages across just species with both tadpole and adult sampling
+
+## Relative change in shape from tadpole to adult
+
+These plots show how much anisotropy changed between the tadpole and the adult life stages within species, across adult habitats. 
+
+**Amartya: why if these are relative changes does the y axis go to 600? What is the bar plot showing vs. the box plot, and why do the patterns look different for the same metric?**
 
 ```{r calculataing relative percentage change in lens shape - life stages}
 
@@ -565,6 +654,12 @@ aniso_change_box <- ggplot(data = relative_change,
 ggplotly(aniso_change_box)
 ```    
        
+## Shapes of tadpole vs. adult lenses across adult habitats
+
+These plots show data (subset to the species with matched tadpole and adult lens shape sampling) for tadpole shape and adult shape plotted across adult habitats. 
+
+### Tadpole/adult change in flatness
+
 ```{r paired boxplot: flatness ~ tadpoles-adults-ecology}       
 
 flat_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
@@ -587,6 +682,8 @@ flat_box_pair
 
 ```
 
+### Tadpole/adult change in anisotropy
+
 ```{r paired boxplot: anisotropy ~ tadpoles-adults-ecology}       
 aniso_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_anisotropy, fill = life_stage),
@@ -608,6 +705,8 @@ aniso_box_pair
 
 ```
 
+### Tadpole/adult change in sphericity
+
 ```{r paired boxplot: sphericity ~ tadpoles-adults-ecology}       
 spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_sphericity, fill = life_stage),
@@ -628,6 +727,8 @@ spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgro
 spher_box_pair
 
 ```
+
+### Tadpole/adult change in elongation
 
 ```{r paired boxplot: elongation ~ tadpoles-adults,-ecology}       
 
@@ -651,7 +752,9 @@ elong_box_pair
 
 ```
 
-```{r Figure 7, fig.height=8, fig.width=8}
+### Tadpole/adult change in shape figure
+
+```{r Figure 7, fig.height=8, fig.width=12, results = "hide"}
 
 
 fig.a <- aniso_box_pair +
@@ -687,31 +790,13 @@ plot_grid(plots)
 dev.off()
 ```
 
-## Lens shape parameters for adults
+# Adult lens shape across ecological traits
 
-### Habitat
+## Habitat
 
-Collapsing "ground_dwelling", "subfossorial" and "scansorial" into a single category "terrestrial"
+These plot shows adult habitat assigned using the same coding as Thomas et al. anuran eye size paper. 
 
-```{r adults: coarse ecology ~ flatness}
-plot_flat_2 <- ggplot(data = filter(anura_mean, life_stage != "tadpole", specimen_id != "DG_frog_1_01"),
-                    aes(x = adult_ecology_2, y = mean_flatness, fill = adult_ecology_2)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
-  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
-  xlab("Ecology") +
-  ylab("Flatness") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Prolate_spheroid"]), linetype = "dotted") + 
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Oblate_spheroid"]), linetype = "dashed") + 
- geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype = "dotdash")
-
-ggplotly(plot_flat_2)
-```
-
-
-Comparison of traits assigned using trait coding key - Table 1
+### Flatness across habitats
 
 ```{r adults: ecology ~ flatness}
 
@@ -734,6 +819,8 @@ scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9"
 ggplotly(plot_flat_eco) 
 ```
 
+### Anisotropy across habitats
+
 ```{r adults: ecology ~ anisotropy}
 
 plot_aniso_eco <- ggplot(data = adult_mean_eco,
@@ -752,6 +839,8 @@ scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9"
 ggplotly(plot_aniso_eco) 
 ```
 
+### Sphericity across habitats
+
 ```{r adults: ecology ~ sphericity}
 plot_spher_eco <- ggplot(data = adult_mean_eco,
                     aes(x = adult_ecology, y = mean_sphericity, fill = adult_ecology)) +
@@ -768,6 +857,8 @@ scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9"
 
 ggplotly(plot_spher_eco) 
 ```
+
+### Elongation across habitats
 
 ```{r adults: ecology ~ elongation}
 plot_elong_eco <- ggplot(data = adult_mean_eco,
@@ -786,7 +877,30 @@ scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9"
 ggplotly(plot_elong_eco) 
 ```
 
-```{r Figure 8, fig.height=8, fig.width=8}
+### Effect of fewer habitat bins
+
+This plot collapses "ground_dwelling", "subfossorial" and "scansorial" species into a single category: "terrestrial"
+
+```{r adults: coarse ecology ~ flatness}
+plot_flat_2 <- ggplot(data = filter(anura_mean, life_stage != "tadpole", specimen_id != "DG_frog_1_01"),
+                    aes(x = adult_ecology_2, y = mean_flatness, fill = adult_ecology_2)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  geom_jitter(aes(text = genus_species), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Flatness") +
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Prolate_spheroid"]), linetype = "dotted") + 
+  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Oblate_spheroid"]), linetype = "dashed") + 
+ geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype = "dotdash")
+
+ggplotly(plot_flat_2)
+```
+
+### Figure of adult lens shape across habitats
+
+```{r Figure 8, fig.height=8, fig.width=8, results = "hide"}
 
 #make panels 
 fig.a <- plot_aniso_eco +
@@ -824,7 +938,11 @@ dev.off()
 ```
 
 
-### Activity Pattern
+## Activity Period
+
+These plots show how adult lens shape varies across adult activity patterns (coded the same way as Thomas et al. eye size paper)
+
+### Flatness across activity periods
 
 ```{r adults: flatness ~ activity period}
 
@@ -844,7 +962,11 @@ ggplotly(flat_ap)
 
 ```
 
-# Relative Lens Size
+# Relative lens size
+
+Lens size relative to eye size affects the sensitivity of the eye. In terrestrial species with spherical lenses, myopia is expected, and having a large lens relative to eye size allows the spherical lens to focus on the retina with a short focal length that increases sensitivity (so we may expect this in dim-light environments, like nocturnal or fossorial)
+
+## Scaling of lens size with eye size in adult anurans
 
 ```{r lm: lens size ~ eye size}
 
@@ -880,6 +1002,7 @@ ggplotly(lens.eye.plot)
 
 ```
 
+## Relative lens size across activity periods
 
 ```{r adults: relative lens size ~ activity period}
 
@@ -903,6 +1026,8 @@ ggplotly(rel.size.ap)
 
 ```
 
+## Relative lens size across adult habitats
+
 ```{r adults: relative lens size ~ ecology}
 
 lens_size_adult <- lens_size %>%
@@ -923,7 +1048,9 @@ scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9"
 ggplotly(rel.size.eco)
 ```
 
-```{r Figure 9, fig.height=8, fig.width=8}
+## Figure for relative lens size
+
+```{r Figure 9, fig.height=12, fig.width=5, results = "hide"}
 
 plots <- plot_grid(lens.eye.plot, rel.size.ap, rel.size.eco, 
                     labels = c("A", "B", "C"), #panel labels for figure
@@ -1344,91 +1471,6 @@ anura_mean %>%
 
 # Phylogenetic distribution of data
 
-## Plot some data onto the phylogeny
-
-### Plotting life stage sampling onto phylogeny
-
-```{r phylo-sampling, fig.height = 15, fig.width = 7}
-
-#create color vector for states
-cols_adult <- c("yes" = "#F8766D", #colored to match your boxplots
-               "no" = "white")
-cols_tad <- c("yes" = "#00BFC4", #colored to match your boxplots
-               "no" = "white")
-
-#plot phylogeny
-plot.phylo(lens.tree, #phylogeny to plot
-           type = "phylogram", #how to visualize phylogeny
-           show.tip.label = TRUE, #whether to show tip labels/species names
-           cex = 1.0, #text size
-           no.margin = TRUE, 
-           use.edge.length = TRUE,
-           edge.width = 1.5, #thickness of phylogeny branches
-           label.offset = 8) #how far away from tips to put labels
-
-#add tip labels for adult sampling
-tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
-          pch = 19, #shape of labels
-          cex = 1, #size of labels
-          adj = 1) #spacing from phylogeny
-
-#add tip labels for tadpole sampling
-tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
-          pch = 19, #shape of labels
-          cex = 1, #size of labels
-          adj = 4.5) #spacing from phylogeny
-
-
-#add legend for pupil shape limited to categories we want
-legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
-       col = c("#F8766D", "#00BFC4"), 
-       pch = 19, #shape of labels
-       cex = 1, 
-       box.lty = 0, 
-       title = "Life stage sampling", 
-       title.adj = 0)
-
-#Replot but export as figure
-
-#create pdf file
-pdf(file = "Figures/sampling.pdf", width=8, height=20)
-
-#make plot
-#plot phylogeny
-plot.phylo(lens.tree, #phylogeny to plot
-           type = "phylogram", #how to visualize phylogeny
-           show.tip.label = TRUE, #whether to show tip labels/species names
-           cex = 1.0, #text size
-           no.margin = TRUE, 
-           use.edge.length = TRUE,
-           edge.width = 1.5, #thickness of phylogeny branches
-           label.offset = 10) #how far away from tips to put labels
-
-#add tip labels for adult sampling
-tiplabels(col = cols_adult[lens_phylo_data$adult_samp], #sets color bassed on whether adults sampled
-          pch = 19, #shape of labels
-          cex = 1, #size of labels
-          adj = 1) #spacing from phylogeny
-
-#add tip labels for tadpole sampling
-tiplabels(col = cols_tad[lens_phylo_data$tad_samp], #sets color based on whether tads sampled
-          pch = 19, #shape of labels
-          cex = 1, #size of labels
-          adj = 6) #spacing from phylogeny
-
-
-#add legend for pupil shape limited to categories we want
-legend(x = 0.05, y = 15, legend = c("adult sampled", "tadpole sampled"), 
-       col = c("#F8766D", "#00BFC4"), 
-       pch = 19, #shape of labels
-       cex = 1, 
-       box.lty = 0, 
-       title = "Life stage sampling", 
-       title.adj = 0)
-#finish pdf file
-dev.off()
-
-```
 
 ### Plotting measurements onto a phylogeny
 
