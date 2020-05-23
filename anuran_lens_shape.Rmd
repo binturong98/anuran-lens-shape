@@ -5,22 +5,12 @@ date: "5/20/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 
 # Markdown settings
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
 
-```
-
-# Loading data and  packages
-
-```{r data , echo = FALSE}
-#install packages
-#install.packages("plotly")
-#install.packages("kableExtra")
-#install.packages("plyr")
-
-#package libraries
+# Load packages
 library(cowplot)
 library(ape)
 library(phytools)
@@ -31,7 +21,10 @@ library(plotly)
 library(tidyverse)
 library(PMCMR)
 library(PMCMRplus)
+```
 
+
+```{r data}
 #data
 #lens_data <- read.csv("ct_lenses.csv", header=TRUE, na.strings = c("", "NA", " ")) #causing issues with hline
 lens_data <- read.csv("ct_lenses.csv")
@@ -496,7 +489,7 @@ relative_change <- lens_matched %>%
          change_sphericity = (mean_sphericity.adults - mean_sphericity.tads)/mean_sphericity.tads *100)
 ```
 
-```{r bar plot: relative percentage change: anisotropy ~ life stage, group = ecology}
+```{r bar plot: relative percentage change: anisotropy ~ life stage for ecology}
 aniso_change_bar <- ggplot(data = relative_change,
                     aes(x = adult_ecology.adults, y = change_anisotropy, 
                         fill = adult_ecology.adults)) +
@@ -511,7 +504,7 @@ aniso_change_bar <- ggplot(data = relative_change,
 aniso_change_bar
 ```
 
-```{r boxplot: relative percentage change: anisotropy  ~ life stage, group = ecology}
+```{r boxplot: relative percentage change: anisotropy  ~ life stage by ecology}
 aniso_change_box <- ggplot(data = relative_change,
                     aes(x = adult_ecology.adults, y = change_anisotropy, fill = adult_ecology.adults)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
@@ -525,7 +518,7 @@ aniso_change_box <- ggplot(data = relative_change,
 ggplotly(aniso_change_box)
 ```    
        
-```{r paired boxplot: flatness ~ tadpoles, adults, group = ecology}       
+```{r paired boxplot: flatness ~ tadpoles-adults-ecology}       
 
 flat_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_flatness, fill = life_stage),
@@ -547,7 +540,7 @@ flat_box_pair
 
 ```
 
-```{r paired boxplot: anisotropy ~ tadpoles, adults, group = ecology}       
+```{r paired boxplot: anisotropy ~ tadpoles-adults-ecology}       
 aniso_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_anisotropy, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
@@ -568,7 +561,7 @@ aniso_box_pair
 
 ```
 
-```{r paired boxplot: sphericity ~ tadpoles, adults, group = ecology}       
+```{r paired boxplot: sphericity ~ tadpoles-adults-ecology}       
 spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_sphericity, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
@@ -589,7 +582,7 @@ spher_box_pair
 
 ```
 
-```{r paired boxplot: elongation ~ tadpoles, adults, group = ecology}       
+```{r paired boxplot: elongation ~ tadpoles-adults,-ecology}       
 
 elong_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = adult_ecology, y = mean_elongation, fill = life_stage),
@@ -992,7 +985,7 @@ ggplotly(vol_elong)
 ```
 
 
-```{r 3d plot: flatness, anisotropy, sphericity, group = ecology}
+```{r 3d plot: flatness-anisotropy-sphericity-ecology}
 plot3d <- plot_ly(lens_mean, 
                   x = ~ mean_flatness, 
                   y = ~ mean_sphericity,
@@ -1010,7 +1003,7 @@ ggplotly(plot3d)
 
 
 
-```{r 3d plot: flatness, anisotropy, sphericity, group = life stage}
+```{r 3d plot: flatness-anisotropy-sphericity-life stage}
 plot3d <- plot_ly(lens_mean, 
                   x = ~ mean_flatness, 
                   y = ~ mean_sphericity,
@@ -1274,7 +1267,7 @@ summary(rel.size.ap.aov)
 
 TukeyHSD(rel.size.ap.aov)
 
-t.test()
+#t.test()
 
 ```
 
