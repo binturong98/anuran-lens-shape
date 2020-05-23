@@ -156,6 +156,7 @@ species_means <- full_join(tads_mean, adults_mean,
 
 ## Species with eye size data
 
+This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each *specimen*. Then, since there were few tadpoles with data, the adults are subset out for analyses. 
 
 ```{r subset for eye data in anura only}
 
