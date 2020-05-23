@@ -1,14 +1,20 @@
 ---
 title: "Lens morphology is influenced by ecology in frogs and toads"
 author: "Amartya Tashi Mitra"
-date: "5/20/2020"
-output: html_document
+date: "May 2020"
+output:
+  html_document:
+    theme: cerulean
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: hide
+    
 ---
 
 ```{r setup, include = FALSE}
 
 # Markdown settings
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.height = 5, fig.width = 8, attr.output='style="max-height: 200px;"') 
 
 # Load packages
 library(cowplot)
@@ -23,36 +29,26 @@ library(PMCMR)
 library(PMCMRplus)
 ```
 
+# Data and subsetting
 
-```{r data}
-#data
-#lens_data <- read.csv("ct_lenses.csv", header=TRUE, na.strings = c("", "NA", " ")) #causing issues with hline
-lens_data <- read.csv("ct_lenses.csv")
+## Raw data
+
+The raw data file contains one row for each *lens* sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way.
+
+```{r raw-data}
+
+# Load raw data
+lens_data <- read.csv("ct_lenses.csv", header = TRUE)
 
 ```
 
+## Mean lens shape by specimen
 
-# Sampling
+The following subset includes one row for each *specimen* measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. 
 
-```{r sampling}
+```{r specimen-means}
 
-#Number of species and individuals sampled 
-counts <-ddply(lens_data, .(lens_data$family, lens_data$genus, lens_data$species, lens_data$life_stage, lens_data$adult_ecology), nrow)
-names(counts) <- c("Family","Genus","Species", "Stage", "Adult ecology", "Lenses sampled")
-
-#create scrolling RMarkdown table of sampling
-kable(counts[ , c("Family","Genus","Species", "Stage", "Adult ecology", "Lenses sampled")], caption = "Species and sampling effort for CT scan data.") %>%
-  kable_styling(full_width = F) %>%
-  collapse_rows(columns = 1, valign = "top") %>%
-  scroll_box(height = "1000px")
-```
-
-
-# Calculating the mean of the right and left lenses
-
-```{r specimen-means of entire dataset}
-
-#calculate mean lens parameters for each specimen
+#Calculate mean lens parameters for each specimen
 lens_mean <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
@@ -71,9 +67,13 @@ lens_mean <- lens_data %>%
   ungroup() 
 ```
 
-# Create subset of species with data for both tadpoles and adults
+## Species with both adult and tadpole sampling
 
-```{r subset for adult-tadpole matches only}
+The following dataframe extracts only the species for which we had scans sampled for both the tadpole and the adult stage. It is subset from the dataframe of mean lens shapes by specimen.  
+
+Amartya, this subset is pulling from the *specimen* means, but should we actually be pulling from the *species* means by life stage? The current subset results in a some duplicate specimens within a species/life stage. 
+
+```{r adult-tadpole matches}
 
 #make separate dataframes for adults and tadpoles
 tads <- filter(lens_mean, life_stage == "tadpole")
@@ -86,11 +86,7 @@ unmatch <- c(setdiff(tads$genus_species, adults$genus_species), setdiff(adults$g
 lens_matched_long <- lens_mean %>% 
   filter(!(genus_species %in% unmatch))
 
-```
-
-```{r subset for adult-tadpole matches in wide format}
-
-#merge tadpole and adult dataframes keeping only matching species
+#merge tadpole and adult dataframes keeping only matching species (in wide format)
 #do an inner join on the two dataframes based on genus_species
 lens_matched <- inner_join(tads, adults, 
              by = "genus_species", 
@@ -98,7 +94,11 @@ lens_matched <- inner_join(tads, adults,
 
 ```
 
-```{r subset for only anura & subseet for only adult anura}
+## Subset including adults only
+
+This subset removed tadpoles, as well as artificial objects. I am not sure we used this in the end, as I think the next subset also allowed for easy plotting/testing of adults vs. tadpoles based on columns. Amartya, thoughts?
+
+```{r adult-anura}
 
 # removing artifical objects and outgroups from the dataset
 anura_mean <- lens_mean %>% 
@@ -109,9 +109,11 @@ adult_mean <- lens_mean %>%
   filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole")
 ```
 
-# Create dataframe with one row per species, with mean data for tadpoles and adults in separate columns
+## Species means by life stage
 
-```{r species-means for anura only in wide format}
+The following creates a dataframe with one row per species, with mean shape data for tadpoles and for adults in separate columns. Any duplicated life stages within species are averaged. 
+
+```{r species-means-wide}
 
 #make separate dataframes for adults and tadpoles
 tads <- filter(lens_mean, life_stage == "tadpole")
@@ -151,7 +153,13 @@ species_means <- full_join(tads_mean, adults_mean,
              suffix = c(".tads", ".adults"))
 ```
 
+
+## Species with eye size data
+
+
 ```{r subset for eye data in anura only}
+
+#create dataframe for eye subset
 eye_mean <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
   mutate_if(is.character, as.factor) %>% 
@@ -173,6 +181,11 @@ adult_eye <- eye_mean %>%
   mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter)
 ```
 
+
+## Repeat measures
+
+The following dataframe subsets the specimens and lenses that were measured multiple times independently in order to determine the precision of measurement techniques. 
+
 ```{r subset to dataframe for repeat measures}
 
 lens_repeat <- lens_data %>%
@@ -180,11 +193,35 @@ filter(life_stage == "repeat" & specimen_id != "USNM299711")
   
 ```
 
-# Import a published phylogeny and match to dataset
+
+# Sampling
+
+We measured lens shape in 176 specimens from 42 families. 
+
+```{r sampling}
+
+#Number of species and individuals sampled 
+counts <-ddply(lens_data, .(lens_data$family, lens_data$genus, lens_data$species, lens_data$life_stage, lens_data$adult_ecology, lens_data$activity_period), nrow)
+names(counts) <- c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")
+
+#Remove artificial shapes
+counts <- counts %>% filter(Stage != "artificial")
+
+#Create scrolling RMarkdown table of sampling
+kable(counts[ , c("Family","Genus","Species", "Stage", "Adult ecology", "Activity period", "Lenses sampled")], caption = "Species and sampling effort for CT scan data.") %>%
+  kable_styling(full_width = F) %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  scroll_box(height = "1000px")
+```
+
+
+# Phylogeny
+
+We imported a published molecular and taxonomy-based phylogeny from Jetz and Pyron (2018) and pruned it to match the species in our dataset. 
 
 ```{r phylo-import, fig.height = 15, fig.width=7}
 
-### Phylogeny names ###
+# Phylogeny import and names -----
 
 #Import phylogeny from Jetz and Pyron 2019
 tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
@@ -199,7 +236,7 @@ colnames(phylo_names) <- "species_phylo"
 #make ID column to match with data later
 phylo_names$ID <- phylo_names$species_phylo
 
-### Dataset names ###
+# Dataset names ------
 
 #make ID column in dataset dataframe 
 lens_species <- species_means %>% #dataframe with all species and life stages
@@ -208,7 +245,7 @@ lens_species <- species_means %>% #dataframe with all species and life stages
   mutate(ID = str_to_sentence(genus_species)) %>% #capitalizes genus to match tip label format
   ungroup()
 
-### Match data species names with phylogeny ###
+# Match data species names with phylogeny names ------
 
 #use a left join in dplyr to match phylo tips to dataset species names
 lens_phylo_data <- lens_species %>%
@@ -225,7 +262,7 @@ lens_phylo_data[lens_phylo_data$ID=="Hypsiboas_geographica", "species_phylo"] <-
 lens_phylo_data[lens_phylo_data$ID=="Chiasmocleis_hudsoni", "species_phylo"] <- "Syncope_hudsoni"
 lens_phylo_data[lens_phylo_data$ID=="Rhombophryne_nilevina", "species_phylo"] <- "Rhombophryne_alluaudi"
 
-### Pruning a phylogeny to match the species in your dataset ###
+# Pruning phylogeny to match the species in the dataset ------
 
 #make list of taxa to drop (in tree but not in dataset)
 drops <- setdiff(tree_orig$tip.label, lens_phylo_data$species_phylo)
@@ -239,27 +276,31 @@ tree.pruned$tip.label
 #check that phylogeny tips and data match exactly (if they match will return "OK")
 name.check(tree.pruned, lens_phylo_data$species_phylo)
 
-#check and reorder tree
-is.rooted(tree.pruned) #tests whether tree is rooted (want it to return "TRUE") 
-is.binary.tree(tree.pruned) #tests whether tree is dichotomous (no polytomies)
+#Tidy and order the tree ------
+
+#test whether tree is rooted
+is.rooted(tree.pruned) 
+
+#test whether tree is dichotomous
+is.binary.tree(tree.pruned) 
 
 #make tree dichotomous
 tree.pruned <- multi2di(tree.pruned)
 
-#rename tip labels from phylogeny to our species names (from ASotW)
+#rename tip labels from phylogeny to our species names (from ASW)
 tree.pruned$tip.label <- lens_phylo_data[["ID"]][match(tree.pruned$tip.label, lens_phylo_data[["species_phylo"]])]
 
 #check that phylogeny tips and data match exactly (if they match will return "OK")
 name.check(tree.pruned, lens_phylo_data$ID)
 
-#rename 
-lens.tree <- ladderize(tree.pruned) #ladderizes tree
+#rename and ladderize phylogeny
+lens.tree <- ladderize(tree.pruned) 
 
-#resort trait dataset to the order of tree tip labels
+#resort trait dataset to match the order of tree tip labels
 rownames(lens_phylo_data) <- lens_phylo_data$ID
 lens_phylo_data <- lens_phylo_data[lens.tree$tip.label, ] 
 
-#plot your beautiful phylogeny
+#plot the resulting phylogeny
 plot.phylo(lens.tree, #phylogeny to plot
            type = "phylogram", #how to visualize phylogeny
            show.tip.label = TRUE, #whether to show tip labels/species names
@@ -270,6 +311,11 @@ plot.phylo(lens.tree, #phylogeny to plot
            label.offset = 3) #how far away from tips to put labels
  
 ```
+
+
+***
+***
+***
 
 # Data visualisation
 
