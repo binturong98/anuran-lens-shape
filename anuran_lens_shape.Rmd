@@ -33,7 +33,7 @@ library(PMCMRplus)
 
 ## Raw data
 
-The raw data file contains one row for each *lens* sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way.
+The raw data file contains one row for **each lens** sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way.
 
 ```{r raw-data}
 
@@ -44,12 +44,12 @@ lens_data <- read.csv("ct_lenses.csv", header = TRUE)
 
 ## Mean lens shape by specimen
 
-The following subset includes one row for each *specimen* measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. 
+The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. 
 
 ```{r specimen-means}
 
 #Calculate mean lens parameters for each specimen
-lens_mean <- lens_data %>%
+specimen_means <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
   mutate_if(is.character, as.factor) %>% 
@@ -67,57 +67,15 @@ lens_mean <- lens_data %>%
   ungroup() 
 ```
 
-## Species with both adult and tadpole sampling
+## Mean lens shape by species and life stage
 
-The following dataframe extracts only the species for which we had scans sampled for both the tadpole and the adult stage. It is subset from the dataframe of mean lens shapes by specimen.  
-
-Amartya, this subset is pulling from the *specimen* means, but should we actually be pulling from the *species* means by life stage? The current subset results in a some duplicate specimens within a species/life stage. 
-
-```{r adult-tadpole matches}
-
-#make separate dataframes for adults and tadpoles
-tads <- filter(lens_mean, life_stage == "tadpole")
-adults <- filter(lens_mean, life_stage == "adult")
-
-#subset species with no tad/adult match
-unmatch <- c(setdiff(tads$genus_species, adults$genus_species), setdiff(adults$genus_species, tads$genus_species))
-
-#remove unmatched species from dataframe (umatched tad/adult)
-lens_matched_long <- lens_mean %>% 
-  filter(!(genus_species %in% unmatch))
-
-#merge tadpole and adult dataframes keeping only matching species (in wide format)
-#do an inner join on the two dataframes based on genus_species
-lens_matched <- inner_join(tads, adults, 
-             by = "genus_species", 
-             suffix = c(".tads", ".adults"))
-
-```
-
-## Subset including adults only
-
-This subset removed tadpoles, as well as artificial objects. I am not sure we used this in the end, as I think the next subset also allowed for easy plotting/testing of adults vs. tadpoles based on columns. Amartya, thoughts?
-
-```{r adult-anura}
-
-# removing artifical objects and outgroups from the dataset
-anura_mean <- lens_mean %>% 
-  filter(life_stage != "artificial" & life_stage != "outgroup")
-
-# subset with only adults 
-adult_mean <- lens_mean %>% 
-  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole")
-```
-
-## Species means by life stage
-
-The following creates a dataframe with one row per species, with mean shape data for tadpoles and for adults in separate columns. Any duplicated life stages within species are averaged. 
+The following creates a dataframe with **one row per species**, with mean shape data for **tadpoles** and for **adults** in separate columns. Any duplicated life stages within species are averaged. 
 
 ```{r species-means-wide}
 
 #make separate dataframes for adults and tadpoles
-tads <- filter(lens_mean, life_stage == "tadpole")
-adults <- filter(lens_mean, life_stage == "adult")
+tads <- filter(specimen_means, life_stage == "tadpole")
+adults <- filter(specimen_means, life_stage == "adult")
 
 #find means for replicates of life stage within species
 #calculate mean lens parameters for each specimen
@@ -154,9 +112,48 @@ species_means <- full_join(tads_mean, adults_mean,
 ```
 
 
+## Species with both adult and tadpole sampling
+
+The following dataframe extracts only the species for which we had scans sampled for **both the tadpole and the adult stage**. It is subset from the dataframe of mean lens shapes by species and life stage.  
+
+```{r adult-tadpole matches}
+
+# Adult-tad species matches in long format -----
+
+#subset species with no tad/adult match from species means by life stage
+unmatch <- c(setdiff(tads_mean$genus_species, adults_mean$genus_species), setdiff(adults_mean$genus_species, tads_mean$genus_species))
+
+#remove unmatched species from dataframe (umatched tad/adult)
+lens_matched_long <- species_means %>% 
+  filter(!(genus_species %in% unmatch))
+
+# Adult-tad species matches in wide format -----
+
+#merge tadpole and adult mean dataframes keeping only matching species (in wide format)
+lens_matched <- inner_join(tads_mean, adults_mean, 
+             by = "genus_species", 
+             suffix = c(".tads", ".adults"))
+```
+
+## Subset of adult specimeen lens shape means
+
+This subset removed tadpoles, as well as artificial objects, from **specimen means** for some of Amartya's analyses and plots. 
+
+```{r adult-anura}
+
+# removing artifical objects and outgroups from the dataset
+anura_mean <- specimen_means %>% 
+  filter(life_stage != "artificial" & life_stage != "outgroup")
+
+# subset with only adults 
+adult_mean <- specimen_means %>% 
+  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole")
+```
+
+
 ## Species with eye size data
 
-This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each *specimen*. Then, since there were few tadpoles with data, the adults are subset out for analyses. 
+This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
 
 ```{r subset for eye data in anura only}
 
@@ -485,7 +482,7 @@ Flat objects have a flatness of 0
 ```{r life stage ~ flatness, fig.height=6, fig.width=8}
 
 #create ggplot object
-plot_flat <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"), #removes outgroups, artifical objects
+plot_flat <- ggplot(data = filter(specimen_means, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"), #removes outgroups, artifical objects
                     aes(x = life_stage, y = mean_flatness, fill = life_stage)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
   stat_summary(fun.y = mean, colour="black", geom="point", 
@@ -494,8 +491,8 @@ plot_flat <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Life Stage") +
   ylab("Flatness")  +
- geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+ geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 ggplotly(plot_flat)
 # > p1 + scale_fill_brewer(palette="Set1") ## for colour-blind friendly colour palette 
@@ -506,7 +503,7 @@ Spheres have a sphericity of 1
 
 ```{r life stage ~ sphericity}
 
-plot_sphericity <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+plot_sphericity <- ggplot(data = filter(specimen_means, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = life_stage, y = mean_sphericity, fill = life_stage)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
   stat_summary(fun.y = mean, colour="black", geom="point", 
@@ -515,8 +512,8 @@ plot_sphericity <- ggplot(data = filter(lens_mean, life_stage != "outgroup", spe
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Life Stage") +
   ylab("Sphericity") +
- geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+ geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 ggplotly(plot_sphericity)
 ```
@@ -526,7 +523,7 @@ Spherical objects have an anisotropy of 0
 
 ```{r life stage ~ anisotropy}
 
-plot_anisotropy <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+plot_anisotropy <- ggplot(data = filter(specimen_means, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = life_stage, y = mean_anisotropy, fill = life_stage)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
   stat_summary(fun.y = mean, colour="black", geom="point", 
@@ -535,8 +532,8 @@ plot_anisotropy <- ggplot(data = filter(lens_mean, life_stage != "outgroup", spe
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Life Stage") +
   ylab("Anisotropy") +
- geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
- geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+ geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+ geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 ggplotly(plot_anisotropy)
 ```
@@ -546,7 +543,7 @@ Elongated objects have an elongation of 0
 
 ```{r life stage ~ elongation}
 
-plot_elongation <- ggplot(data = filter(lens_mean, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+plot_elongation <- ggplot(data = filter(specimen_means, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
                     aes(x = life_stage, y = mean_elongation, fill = life_stage)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
   stat_summary(fun.y = mean, colour="black", geom="point", 
@@ -555,8 +552,8 @@ plot_elongation <- ggplot(data = filter(lens_mean, life_stage != "outgroup", spe
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Life Stage") +
   ylab("Elongation") +
-  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") + 
- geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype = "dashed")
+  geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted") + 
+ geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Sphere"]), linetype = "dashed")
 
 ggplotly(plot_elongation)
 ```
@@ -675,8 +672,8 @@ flat_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgrou
   xlab("Ecology") +
   ylab("Flatness") +
   labs(fill = "Life Stage") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 flat_box_pair
 
@@ -698,8 +695,8 @@ aniso_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgro
   xlab("Ecology") +
   ylab("Anisotropy") +
   labs(fill = "Life Stage") +
-  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+  geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 aniso_box_pair
 
@@ -721,8 +718,8 @@ spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgro
   xlab("Ecology") +
   ylab("Sphericity") +
   labs(fill = "Life Stage") +
-  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+  geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 spher_box_pair
 
@@ -745,8 +742,8 @@ elong_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgro
   xlab("Ecology") +
   ylab("Elongation") +
   labs(fill = "Life Stage") +
-  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted")
+  geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted")
 
 elong_box_pair
 
@@ -812,8 +809,8 @@ plot_flat_eco <- ggplot(data = adult_mean_eco,
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Ecology") +
   ylab("Flatness") +
- geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+ geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted") +
 scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
 
 ggplotly(plot_flat_eco) 
@@ -832,8 +829,8 @@ plot_aniso_eco <- ggplot(data = adult_mean_eco,
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Ecology") +
   ylab("Anisotropy") +
-  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_anisotropy[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+  geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted") +
 scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
 
 ggplotly(plot_aniso_eco) 
@@ -851,8 +848,8 @@ plot_spher_eco <- ggplot(data = adult_mean_eco,
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Ecology") +
   ylab("Sphericity") +
-  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_sphericity[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+  geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted") +
 scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
 
 ggplotly(plot_spher_eco) 
@@ -870,8 +867,8 @@ plot_elong_eco <- ggplot(data = adult_mean_eco,
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Ecology") +
   ylab("Elongation") +
- geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Sphere"]), linetype =   "dashed") +
-  geom_hline(aes(yintercept = lens_mean$mean_elongation[lens_mean$specimen_id == "Lens_replica"]), linetype = "dotted") +
+ geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Sphere"]), linetype =   "dashed") +
+  geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"]), linetype = "dotted") +
 scale_fill_manual(values=c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00"))
 
 ggplotly(plot_elong_eco) 
@@ -891,9 +888,9 @@ plot_flat_2 <- ggplot(data = filter(anura_mean, life_stage != "tadpole", specime
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("Ecology") +
   ylab("Flatness") +
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Prolate_spheroid"]), linetype = "dotted") + 
-  geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Oblate_spheroid"]), linetype = "dashed") + 
- geom_hline(aes(yintercept = lens_mean$mean_flatness[lens_mean$specimen_id == "Sphere"]), linetype = "dotdash")
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Prolate_spheroid"]), linetype = "dotted") + 
+  geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Oblate_spheroid"]), linetype = "dashed") + 
+ geom_hline(aes(yintercept = specimen_means$mean_flatness[specimen_means$specimen_id == "Sphere"]), linetype = "dotdash")
 
 ggplotly(plot_flat_2)
 ```
@@ -946,10 +943,10 @@ These plots show how adult lens shape varies across adult activity patterns (cod
 
 ```{r adults: flatness ~ activity period}
 
-lens_mean_ap <- lens_mean %>%
+specimen_means_ap <- specimen_means %>%
   filter(activity_period != "" & activity_period != "unknown")
 
-flat_ap <- ggplot(data = filter(lens_mean_ap, life_stage != "outgroup", life_stage != "tadpole", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica", activity_period != "unknown"),
+flat_ap <- ggplot(data = filter(specimen_means_ap, life_stage != "outgroup", life_stage != "tadpole", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica", activity_period != "unknown"),
                         aes(x = activity_period, y = mean_flatness, fill = activity_period)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
   stat_summary(fun.y = mean, colour="black", geom="point", 
@@ -1160,7 +1157,7 @@ ggplotly(vol_elong)
 
 
 ```{r 3d plot: flatness-anisotropy-sphericity-ecology}
-plot3d <- plot_ly(lens_mean, 
+plot3d <- plot_ly(specimen_means, 
                   x = ~ mean_flatness, 
                   y = ~ mean_sphericity,
                   z = ~ mean_anisotropy,
@@ -1178,7 +1175,7 @@ ggplotly(plot3d)
 
 
 ```{r 3d plot: flatness-anisotropy-sphericity-life stage}
-plot3d <- plot_ly(lens_mean, 
+plot3d <- plot_ly(specimen_means, 
                   x = ~ mean_flatness, 
                   y = ~ mean_sphericity,
                   z = ~ mean_anisotropy,
