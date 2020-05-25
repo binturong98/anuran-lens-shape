@@ -118,21 +118,27 @@ The following dataframe extracts only the species for which we had scans sampled
 
 ```{r adult-tadpole matches}
 
-# Adult-tad species matches in long format -----
-
-#subset species with no tad/adult match from species means by life stage
-unmatch <- c(setdiff(tads_mean$genus_species, adults_mean$genus_species), setdiff(adults_mean$genus_species, tads_mean$genus_species))
-
-#remove unmatched species from dataframe (umatched tad/adult)
-lens_matched_long <- species_means %>% 
-  filter(!(genus_species %in% unmatch))
-
 # Adult-tad species matches in wide format -----
 
 #merge tadpole and adult mean dataframes keeping only matching species (in wide format)
 lens_matched <- inner_join(tads_mean, adults_mean, 
              by = "genus_species", 
              suffix = c(".tads", ".adults"))
+
+
+# Adult-tad species matches in long format -----
+
+#subset species with no tad/adult match from species means by life stage
+unmatch <- c(setdiff(tads_mean$genus_species, adults_mean$genus_species), setdiff(adults_mean$genus_species, tads_mean$genus_species))
+
+#add life stage column to adult and tad mean dataframes
+adults_mean$life_stage <- "adult"
+tads_mean$life_stage <- "tadpole"
+
+#merge tadpole and adult mean dataframes by species and remove unmatched species from dataframe (umatched tad/adult)
+lens_matched_long <- merge(tads_mean, adults_mean, all = TRUE) %>%
+ filter(!(genus_species %in% unmatch))
+            
 ```
 
 ## Subset of adult specimeen lens shape means
@@ -616,8 +622,7 @@ These plots show how much anisotropy changed between the tadpole and the adult l
 ```{r calculataing relative percentage change in lens shape - life stages}
 
 relative_change <- lens_matched %>%
-  filter(specimen_id.tads != "BMNH1906.8.30.62") %>%
-  mutate(change_anisotropy = (mean_anisotropy.adults - mean_anisotropy.tads)/mean_anisotropy.tads *100,
+mutate(change_anisotropy = (mean_anisotropy.adults - mean_anisotropy.tads)/mean_anisotropy.tads *100,
          change_flatness = (mean_flatness.adults - mean_flatness.tads)/mean_flatness.tads *100,
          change_sphericity = (mean_sphericity.adults - mean_sphericity.tads)/mean_sphericity.tads *100)
 ```
@@ -659,7 +664,7 @@ These plots show data (subset to the species with matched tadpole and adult lens
 
 ```{r paired boxplot: flatness ~ tadpoles-adults-ecology}       
 
-flat_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+flat_box_pair <-  ggplot(data = lens_matched_long,
                     aes(x = adult_ecology, y = mean_flatness, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
@@ -682,7 +687,7 @@ flat_box_pair
 ### Tadpole/adult change in anisotropy
 
 ```{r paired boxplot: anisotropy ~ tadpoles-adults-ecology}       
-aniso_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+aniso_box_pair <-  ggplot(data = lens_matched_long,
                     aes(x = adult_ecology, y = mean_anisotropy, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
@@ -705,7 +710,7 @@ aniso_box_pair
 ### Tadpole/adult change in sphericity
 
 ```{r paired boxplot: sphericity ~ tadpoles-adults-ecology}       
-spher_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+spher_box_pair <-  ggplot(data = lens_matched_long,
                     aes(x = adult_ecology, y = mean_sphericity, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
@@ -729,7 +734,7 @@ spher_box_pair
 
 ```{r paired boxplot: elongation ~ tadpoles-adults,-ecology}       
 
-elong_box_pair <-  ggplot(data = filter(lens_matched_long, life_stage != "outgroup", specimen_id != "Sphere", specimen_id != "Oblate_spheroid", specimen_id != "Prolate_spheroid", specimen_id != "Lens_replica"),
+elong_box_pair <-  ggplot(data = lens_matched_long,
                     aes(x = adult_ecology, y = mean_elongation, fill = life_stage),
                     position = position_dodge(0.8)) +# control space between box plots
   geom_boxplot(notch = FALSE, outlier.shape = NA) + #controls boxes
@@ -1309,7 +1314,6 @@ t.test(lens_matched$mean_elongation.tads, lens_matched$mean_elongation.adults, p
 # Calculating difference in lens shape parameters 
 
 lens_matched <- lens_matched %>%
-  filter(specimen_id.tads != "BMNH1906.8.30.62") %>%
   mutate(change.anisotropy = mean_anisotropy.tads - mean_anisotropy.adults,
          change.flatness = mean_flatness.tads - mean_flatness.adults,
          change.sphericity = mean_sphericity.tads - mean_sphericity.adults,
