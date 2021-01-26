@@ -1,0 +1,1021 @@
+---
+title: "Lens morphology is influenced by ecology in frogs and toads"
+authors: "A.T. Mitra, K.T. Thomas, M.C Womack"
+date: "12/14/2020"
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: hide
+    
+---
+
+```{r setup, include = FALSE}
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.height = 5, fig.width = 8, attr.output='style="max-height: 200px;"') 
+
+# Load packages
+library(cowplot)
+library(tcltk)
+library(ape)
+library(phytools)
+library(geiger)
+library(stringr)
+library(kableExtra)
+library(plotly)
+library(tidyverse)
+library(geomorph)
+library(RRPP)
+library(viridis)
+
+```
+
+# Data and subsetting
+
+## Raw data
+
+The raw data file contains one row for **each lens** sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way. The tree_orig file contains the Jetz and Pyron 2019 phylogeny.
+
+```{r raw-data}
+
+# Load raw data
+lens_data <- read.csv("ct_lenses.csv", header = TRUE)
+
+#Import phylogeny from Jetz and Pyron 2019
+tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
+
+```
+
+## Mean lens shape by specimen
+
+The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes outgroups and reference blender shapes. 
+```{r specimen-means}
+
+#Calculate mean lens parameters for each specimen
+specimen_means <- lens_data %>%
+  mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
+  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
+  mutate_if(is.character, as.factor) %>% 
+  group_by(specimen_id, genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(volume_mm3, na.rm = TRUE),
+            mean_area = mean(area_mm2, na.rm = TRUE),
+            mean_breadth = mean(breadth_mm, na.rm = TRUE),
+            mean_length = mean(length_mm, na.rm = TRUE),
+            mean_width = mean(width_mm, na.rm = TRUE),
+            mean_flatness = mean(flatness, na.rm = TRUE),
+            mean_anisotropy = mean(anisotropy, na.rm = TRUE),
+            mean_elongation = mean(elongation, na.rm = TRUE),
+            mean_sphericity = mean(sphericity, na.rm = TRUE),
+            mean_svl = mean(sv_length_mm, na.rm = TRUE),
+            n = n()) %>%
+  ungroup() 
+
+```
+
+## Mean lens shape by species and life stage
+
+The following creates a dataframe with **one row per life stage for a species**. Mean shape data for **tadpoles** and for **adults** are in separate rows and any duplicated life stages within species are averaged. This subset contains anurans only.
+
+```{r species-stage-means}
+
+species_stage_means <- specimen_means%>%
+  filter(life_stage != "outgroup" & life_stage != "artificial") %>%
+  group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
+            mean_area = mean(mean_area, na.rm = TRUE),
+            mean_breadth = mean(mean_breadth, na.rm = TRUE),
+            mean_length = mean(mean_length, na.rm = TRUE),
+            mean_width = mean(mean_width, na.rm = TRUE),
+            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+            mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
+            mean_elongation = mean(mean_elongation, na.rm = TRUE),
+            mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
+            mean_svl = mean(mean_svl, na.rm = TRUE),
+            n_specimens = n())
+
+#add synonym and substitutions for phylogeny into dataframe (genus_species column)
+species_stage_means[species_stage_means$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
+species_stage_means[species_stage_means$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
+species_stage_means[species_stage_means$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
+
+```
+
+The following creates a dataframe with **one row per species**
+
+```{r species_means-wide}
+
+#make separate dataframes for adults and tadpoles
+tads_mean <- filter(species_stage_means, life_stage == "tadpole")
+adults_mean <- filter(species_stage_means, life_stage == "adult")
+
+#merge tadpole and adult dataframes by species 
+species_means <- full_join(tads_mean, adults_mean, 
+                           by = "genus_species", 
+                           suffix = c(".tads", ".adults"))
+```
+
+## Species with eye size data
+
+This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
+
+```{r subsets for eye data in anura only - activity and ecology}
+
+#create dataframe for eye subset
+eye_mean <- lens_data %>%
+  mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(life_stage == c("adult", "tadpole"))  %>% 
+  group_by(genus_species, life_stage, adult_ecology, activity_period) %>%
+  summarise(mean.eye.diameter = mean(eye_diameter_mm, na.rm = TRUE),
+            mean.axial.length = mean(axial_length_mm, na.rm = TRUE),
+            mean.lens.retina.length = mean(lens_to_retina_mm, na.rm = TRUE),
+            mean.lens.diameter = mean(lens_diameter_mm, na.rm = TRUE),
+            mean.lens.depth = mean(lens_depth_mm, na.rm = TRUE),
+            n = n())
+
+#convert NaN values to NA 
+eye_mean[eye_mean == "NaN"] <- NA
+
+# subsetting for adults 
+adult_eye <- eye_mean %>%
+  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole") %>%
+  mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter) %>%
+  filter(lens_relative_to_eye > 0)
+
+#capitalize genus 
+str_sub(adult_eye$genus_species, 1, 1) <- str_sub(adult_eye$genus_species, 1, 1) %>% str_to_upper()
+
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+adult_eye[adult_eye$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
+adult_eye[adult_eye$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
+adult_eye[adult_eye$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
+
+View(adult_eye)
+
+
+# Make tree-trimmed dataset for ecology analysis of lens size 
+table(adult_eye$adult_ecology)
+adult_eye_eco<-filter(adult_eye, adult_ecology != "unknown")
+adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
+
+adult_eye_eco<-as.data.frame(adult_eye_eco)
+
+#trim tree to adult data
+rownames(adult_eye_eco)<-adult_eye_eco$genus_species;
+name.check(tree_orig,adult_eye_eco)->overlap
+
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree_adult_eye_eco;
+plot(tree_adult_eye_eco)
+
+#Remove excess data from species not found in tree
+adult_eye_eco<-adult_eye_eco[ ! adult_eye_eco$genus_species %in% overlap$data_not_tree, ]
+adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
+adult_eye_eco <-  adult_eye_eco[tree_adult_eye_eco$tip.label, ]
+
+# Make tree-trimmed dataset for activity analysis of lens size 
+adult_eye_activ<-filter(adult_eye, activity_period != "unknown")
+adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
+table(adult_eye_activ$activity_period)
+adult_eye_activ<-as.data.frame(adult_eye_activ)
+
+#trim tree to adult data
+rownames(adult_eye_activ)<-adult_eye_activ$genus_species;
+name.check(tree_orig,adult_eye_activ)->overlap
+
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.eye.activ;
+plot(tree.eye.activ)
+
+#Remove excess data from species not found in tree
+adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$data_not_tree, ]
+adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
+adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
+
+```
+
+# Data checks
+
+## Repeat measures
+
+The following dataframe subsets the specimens and lenses that were measured multiple times independently in order to determine the precision of measurement techniques. 
+
+```{r subset to dataframe for repeat measures}
+
+lens_repeat <- lens_data %>%
+filter(life_stage == "repeat" & specimen_id != "USNM299711")
+  
+```
+
+The following creates a dataframe with **one row per specimen**. Shape data for **each lens** are in **separate columns**. The dataframe is then split into two; One for left lenses and one for right lenses. These dataframes contain data for anurans only.
+
+```{r left-right-wide}
+
+# dataframe that averages by specimen
+LR_lens_data <- lens_data %>%
+  mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
+  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62" & life_stage != "outgroup" & life_stage != "artificial") %>%
+  mutate_if(is.character, as.factor) %>% 
+  group_by(specimen_id, genus_species, lens, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(volume_mm3, na.rm = TRUE),
+            mean_area = mean(area_mm2, na.rm = TRUE),
+            mean_breadth = mean(breadth_mm, na.rm = TRUE),
+            mean_length = mean(length_mm, na.rm = TRUE),
+            mean_width = mean(width_mm, na.rm = TRUE),
+            mean_flatness = mean(flatness, na.rm = TRUE),
+            mean_anisotropy = mean(anisotropy, na.rm = TRUE),
+            mean_elongation = mean(elongation, na.rm = TRUE),
+            mean_sphericity = mean(sphericity, na.rm = TRUE),
+            mean_svl = mean(sv_length_mm, na.rm = TRUE),
+            n = n()) %>%
+  ungroup() 
+
+#subset left and right data  then merge left and right by specimen
+arrange(LR_lens_data, specimen_id, genus_species, life_stage)
+
+L_lens_data <- filter(LR_lens_data, lens == "left")
+R_lens_data <- filter(LR_lens_data, lens == "right")
+
+LR_lens_data <- full_join(L_lens_data, R_lens_data, 
+                          by = c("specimen_id", "life_stage"),
+                          suffix = c(".left", ".right"))
+
+LR_lens_data<-as.data.frame(LR_lens_data)
+row.names(LR_lens_data)<-paste(LR_lens_data$specimen_id,row.names(LR_lens_data),sep="_")
+
+#remove any rows with missing left or right lens shape data
+LR_lens_data <- filter(LR_lens_data, mean_flatness.left > 0 & mean_anisotropy.left > 0 & mean_elongation.left > 0 & mean_sphericity.left > 0)
+LR_lens_data <- filter(LR_lens_data, mean_flatness.right > 0 & mean_anisotropy.right > 0 & mean_elongation.right > 0 & mean_sphericity.right > 0)
+
+```
+
+Plots for all 3D metrics of left against right lenses
+
+```{r left vs right lens shape}
+
+# left v right for individual metrics
+pdf(file = "LeftVsRight_LensShape_.pdf", width = 9,  height = 7)
+par(mfrow=c(2, 2))
+plot(LR_lens_data$mean_flatness.left~LR_lens_data$mean_flatness.right, ylab= "Left flatness", xlab= "Right flatness")
+abline(0,1, col="red")
+plot(LR_lens_data$mean_anisotropy.left~LR_lens_data$mean_anisotropy.right, ylab= "Left anisotropy", xlab= "Right anisotropy")
+abline(0,1, col="red")
+plot(LR_lens_data$mean_elongation.left~LR_lens_data$mean_elongation.right, ylab= "Left elongation", xlab= "Right elongation")
+abline(0,1, col="red")
+plot(LR_lens_data$mean_sphericity.left~LR_lens_data$mean_sphericity.right, ylab= "Left sphericity", xlab= "Right sphericity")
+abline(0,1, col="red")
+dev.off()
+
+# linear models of left vs right values for each lens metric
+LR_flat<-lm(LR_lens_data$mean_flatness.left~LR_lens_data$mean_flatness.right)
+LR_anis<-lm(LR_lens_data$mean_anisotropy.left~LR_lens_data$mean_anisotropy.right)
+LR_elon<-lm(LR_lens_data$mean_elongation.left~LR_lens_data$mean_elongation.right)
+LR_sphe<-lm(LR_lens_data$mean_sphericity.left~LR_lens_data$mean_sphericity.right)
+
+# naming the residuals of the models as specimen_id
+names(LR_flat$residuals)<-LR_lens_data$specimen_id
+names(LR_anis$residuals)<-LR_lens_data$specimen_id
+names(LR_elon$residuals)<-LR_lens_data$specimen_id
+names(LR_sphe$residuals)<-LR_lens_data$specimen_id
+
+pdf(file = "LeftVsRight_LensShape_OrderedLMResiduals_.pdf", width = 9,  height = 7)
+par(mfrow=c(2, 2))
+LR_flat$residuals <- sort(-(LR_flat$residuals))
+plot(LR_flat$residuals)
+abline(0,0, col="red")
+LR_anis$residuals <- sort(-(LR_anis$residuals))
+plot(LR_anis$residuals)
+abline(0,0, col="red")
+LR_elon$residuals <- sort(-(LR_elon$residuals))
+plot(LR_elon$residuals)
+abline(0,0, col="red")
+LR_sphe$residuals <- sort(-(LR_sphe$residuals))
+plot(LR_sphe$residuals)
+abline(0,0, col="red")
+dev.off()
+
+pdf(file = "LeftVsRight_LensShape_OrderedLMResiduals_Labeled_.pdf", width = 30,  height = 30)
+par(mfrow=c(2, 2))
+plot(LR_flat$residuals)
+text(LR_flat$residuals, label=names(LR_anis$residuals))
+plot(LR_anis$residuals)
+text(LR_anis$residuals, label=names(LR_anis$residual))
+plot(LR_elon$residuals)
+text(LR_elon$residuals, label=names(LR_elon$residual))
+plot(LR_sphe$residuals)
+text(LR_sphe$residuals, label=names(LR_sphe$residual))
+dev.off()
+
+# Start writing to an output file
+sink('LR_ShapeAssymetry_Outliers.txt')
+
+#check for outliers
+cat("\n\n LR_Flat_Outliers \n")
+boxplot.stats(LR_flat$residuals)$out  
+cat("\n\n LR_Anis_Outliers \n")
+boxplot.stats(LR_anis$residuals)$out  
+cat("\n\n LR_Elon_Outliers \n")
+boxplot.stats(LR_elon$residuals)$out 
+cat("\n\n LR_Sphe_Outliers \n")
+boxplot.stats(LR_sphe$residuals)$out  
+
+# Stop writing to the file
+sink()
+
+```
+
+Correlation between all metrics. Flatness is excluded from further analyses to avoid multicollinearity because it is highly correlated with anisotropy 
+
+```{r correlation in lens metrics}
+
+pdf(file = "ShapeCorrelations_.pdf", width = 10,  height = 12)
+par(mfrow=c(3, 2))
+plot(species_stage_means$mean_flatness~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Anisotropy")
+legend("bottomleft", legend = c("adult", "tadpole"), col = c("cyan","black"), pch=1)
+plot(species_stage_means$mean_flatness~species_stage_means$mean_elongation, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Elongation")
+plot(species_stage_means$mean_flatness~species_stage_means$mean_sphericity, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Sphericity")
+plot(species_stage_means$mean_elongation~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Elongation", xlab= "Anisotropy")
+plot(species_stage_means$mean_elongation~species_stage_means$mean_sphericity, col=species_stage_means$life_stage, ylab= "Elongation", xlab= "Sphericity")
+plot(species_stage_means$mean_sphericity~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Sphericity", xlab= "Anisotropy")
+dev.off()
+
+```
+
+```{r snout-vent length and shape}
+
+par(mfrow=c(2, 2))
+lm(mean_sphericity~mean_svl, data = species_stage_means)
+lm(mean_anisotropy~mean_svl, data = species_stage_means)
+lm(mean_flatness~mean_svl, data = species_stage_means)
+lm(mean_elongation~mean_svl, data = species_stage_means)
+
+pdf(file = "LensShapes_BySVL_.pdf", width = 9,  height = 7)
+par(mfrow=c(2, 2))
+plot(mean_sphericity~mean_svl, data = species_stage_means)
+plot(mean_anisotropy~mean_svl, data = species_stage_means)
+plot(mean_flatness~mean_svl, data = species_stage_means)
+plot(mean_elongation~mean_svl, data = species_stage_means)
+dev.off()
+
+par(mfrow=c(1, 1))
+plot(mean_svl~adult_ecology, data = species_stage_means)
+
+```
+
+# Data Analysis      
+
+## Q1 Tadpoles Vs Adults (no phylogenetic correction)
+
+### t-tests (each metric in turn)
+
+```{r independent t-test all tads and adults}
+
+# unequal variances therefore welch two sample t-test 
+
+t.test(mean_anisotropy~life_stage, data = species_stage_means)
+# p = 2.2e-16 ***
+
+t.test(mean_sphericity~life_stage, data = species_stage_means)
+# p = 1.885e-14 ***
+
+t.test(mean_elongation~life_stage, data = species_stage_means)
+# p = 0.6734
+
+```
+
+### Procrustes ANOVA for shape variables
+
+```{r procD all metrics}
+
+fit<-summary(procD.lm(species_stage_means[,12:14]~life_stage,iter = 999,seed = NULL,RRPP = TRUE, SS.type = NULL, int.first = FALSE, Cov = NULL, data = species_stage_means, print.progress = TRUE)) #no flatness
+fit
+
+```
+
+## Q2 Phylogenetic signal analyses
+
+### PCA
+
+```{r PCA}
+
+#dimension conversion
+row.names(species_stage_means) <- paste(species_stage_means$life_stage, row.names(species_stage_means), sep="_") 
+species_stage_means$life_Stage <- NULL
+
+# running PCA on tadpoles and adults with flatness, anisotropy, elongation and sphericity values
+lens.pca <- prcomp(species_stage_means[,c(12:14)], center = TRUE, scale. = TRUE)
+
+# summary stats
+summary(lens.pca)
+
+str(lens.pca)
+
+# eigenvectors
+lens.pca$rotation
+
+# eigenvalues 
+(lens.pca$sdev)^2
+
+#plot directly
+plot(lens.pca$x[,1], lens.pca$x[,2])
+
+```
+
+```{r phylogenetic signal}
+
+# PCA with all data tadpole Xs and adults Os
+pca_data<- cbind(as.data.frame(species_stage_means), as.data.frame(lens.pca$x))
+
+pca_means <- pca_data %>%
+  #mutate_if(is.character, as.factor) %>% 
+  group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
+            mean_area = mean(mean_area, na.rm = TRUE),
+            mean_breadth = mean(mean_breadth, na.rm = TRUE),
+            mean_length = mean(mean_length, na.rm = TRUE),
+            mean_width = mean(mean_width, na.rm = TRUE),
+            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+            mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
+            mean_elongation = mean(mean_elongation, na.rm = TRUE),
+            mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
+            mean_svl = mean(mean_svl, na.rm = TRUE),
+            n = n(),
+            mean_PC1 = mean(PC1, na.rm = TRUE),
+            mean_PC2 = mean(PC2, na.rm = TRUE),
+            mean_PC3 = mean(PC3, na.rm = TRUE)) %>%
+  ungroup() 
+
+
+#make separate dataframes for adults and tadpoles
+phylo_tads <- filter(pca_means, life_stage == "tadpole")
+phylo_adults <- filter(pca_means, life_stage == "adult")
+
+#Merge dataset by genus species
+phylo_pca_means <- full_join(phylo_tads, phylo_adults, 
+                             by = "genus_species", 
+                             suffix = c(".tads", ".adults"))
+
+#capitalize genus 
+str_sub(phylo_pca_means$genus_species, 1, 1) <- str_sub(phylo_pca_means$genus_species, 1, 1) %>% str_to_upper()
+
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+phylo_pca_means[phylo_pca_means$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
+phylo_pca_means[phylo_pca_means$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
+phylo_pca_means[phylo_pca_means$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
+
+#make a dataframe for matching with phylogeny 
+phylo_pca_means<-as.data.frame(phylo_pca_means)
+
+
+#trim tree to data
+rownames(phylo_pca_means)<-phylo_pca_means$genus_species;
+name.check(tree_orig,phylo_pca_means)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.pruned;
+plot(tree.pruned)
+#Remove excess data from species not found in tree
+phylo_pca_means<-phylo_pca_means[ ! phylo_pca_means$genus_species %in% overlap$data_not_tree, ]
+phylo_pca_means[] <- lapply(phylo_pca_means, function(x) if(is.factor(x)) factor(x) else x)
+
+
+#BUILD TAPDOLE, ADULT, & BOTH PHYLOGENETIC DATASETS
+tad_phylo_means<-filter(phylo_pca_means , mean_flatness.tads > 0)
+
+adult_phylo_means<-filter(phylo_pca_means , mean_flatness.adults > 0)
+
+both_phylo_means<-filter(tad_phylo_means , mean_flatness.adults > 0)
+both_phylo_means$mean_flatness.diff<-both_phylo_means$mean_flatness.tads-both_phylo_means$mean_flatness.adults
+both_phylo_means$mean_anisotropy.diff<-both_phylo_means$mean_anisotropy.tads-both_phylo_means$mean_anisotropy.adults
+both_phylo_means$mean_elongation.diff<-both_phylo_means$mean_elongation.tads-both_phylo_means$mean_elongation.adults
+both_phylo_means$mean_sphericity.diff<-both_phylo_means$mean_sphericity.tads-both_phylo_means$mean_sphericity.adults
+
+#trim tree to tad data
+rownames(tad_phylo_means)<-tad_phylo_means$genus_species;
+name.check(tree_orig,tad_phylo_means)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.tad;
+plot(tree.tad)
+#Remove excess data from species not found in tree
+tad_phylo_means<-tad_phylo_means[ ! tad_phylo_means$genus_species %in% overlap$data_not_tree, ]
+tad_phylo_means[] <- lapply(tad_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
+rownames(tad_phylo_means)<-tad_phylo_means$genus_species;
+tad_phylo_means <- tad_phylo_means[tree.tad$tip.label,]
+
+#trim tree to adult data
+rownames(adult_phylo_means)<-adult_phylo_means$genus_species;
+name.check(tree_orig,adult_phylo_means)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult;
+plot(tree.adult)
+#Remove excess data from species not found in tree
+adult_phylo_means<-adult_phylo_means[ ! adult_phylo_means$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_means[] <- lapply(adult_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
+rownames(adult_phylo_means)<-adult_phylo_means$genus_species;
+adult_phylo_means <-  adult_phylo_means[tree.adult$tip.label, ]
+
+#trim tree to matched tad and adult (both) data
+rownames(both_phylo_means)<-both_phylo_means$genus_species;
+name.check(tree_orig,both_phylo_means)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.both;
+plot(tree.both)
+#Remove excess data from species not found in tree
+both_phylo_means<-both_phylo_means[ ! both_phylo_means$genus_species %in% overlap$data_not_tree, ]
+both_phylo_means[] <- lapply(both_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
+rownames(both_phylo_means)<-both_phylo_means$genus_species;
+both_phylo_means <-  both_phylo_means[tree.both$tip.label, ]
+
+
+######## phylogenetic signal of tad shape 
+physignal(as.matrix(tad_phylo_means[,c(12:14)]), tree.tad,iter = 999, seed = NULL)
+
+######## phylogenetic signal of adult lens shape.final
+physignal(as.matrix(adult_phylo_means[,c(30:32)]), tree.adult, iter = 999, seed = NULL)
+
+######## pylogenetic signal of the difference between tad and adult lens shape 
+physignal(as.matrix(both_phylo_means[,c(39:41)]), tree.both, iter = 999, seed = NULL)
+
+# check phy signal for tads and adults using subsetted data that has both
+physignal(as.matrix(both_phylo_means[,c(12:14)]), tree.both, iter = 999, seed = NULL)
+physignal(as.matrix(both_phylo_means[,c(30:32)]), tree.both, iter = 999, seed = NULL)
+
+```
+
+## Q3 Difference between tadpole and adult lens shape by ecology (phylogenetic correction)
+
+```{r Procrustes ANOVA and PGLS}
+
+#check adequate levels for testing
+table(both_phylo_means$adult_ecology.adults)
+
+#procD.pgls of lens shape differences in all 3 measures 
+procD<-procD.pgls(both_phylo_means[,c(39,41)]~adult_ecology.adults, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
+summary(procD)
+
+
+#pairwise comparisons
+PairEcoTest<-pairwise(procD, fit.null = NULL, both_phylo_means$adult_ecology.adults, covariate = NULL, print.progress = FALSE)
+summary(PairEcoTest)
+
+#pgls for difference for each shape measure in turn
+library(caper)
+both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] #Align data and phylogeny labels
+geocapertree <- makeNodeLabel(tree.both, method = "number", prefix = "Node")
+geocaperdata <- comparative.data(phy=geocapertree, data=both_phylo_means, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+
+aniso.pgls<-pgls(mean_anisotropy.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(aniso.pgls)
+
+flat.pgls<-pgls(mean_flatness.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(flat.pgls)
+
+elong.pgls<-pgls(mean_elongation.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(elong.pgls)
+
+sphere.pgls<-pgls(mean_sphericity.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(sphere.pgls)
+
+```
+
+## Q4 Tadpole and adult lens shape by ecology (phylogenetic correction)
+
+```{r PGLS tadpole lens shape by ecology}
+
+#check tadpole dataset has correct ecology levels
+table(tad_phylo_means$adult_ecology.adults)
+
+#procD.pgls of differences in tadpole eye shape (all 3 measures)  BY STAGE
+
+#procD.pgls of differences in tadpole eye shape (all 3 measures) 
+procD<-procD.pgls(tad_phylo_means[,c(12:14)]~adult_ecology.tads, tree.tad, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = tad_phylo_means, print.progress = TRUE)
+summary(procD)
+
+```
+
+```{r PGLS adult lens shape by ecology}
+
+#PGLS adult eye measures vs ecology 
+adult_phylo_eco<-filter(adult_phylo_means, adult_ecology.adults != "unknown")
+table(adult_phylo_eco$adult_ecology.adults)
+
+#trim tree to adult data
+rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
+name.check(tree_orig,adult_phylo_eco)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.eco;
+#plot(tree.adult.eco)
+#Remove excess data from species not found in tree
+adult_phylo_eco<-adult_phylo_eco[ ! adult_phylo_eco$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_eco[] <- lapply(adult_phylo_eco, function(x) if(is.factor(x)) factor(x) else x)
+adult_phylo_eco <-  adult_phylo_eco[tree.adult.eco$tip.label, ]
+
+
+adult_phylo_activ<-filter(adult_phylo_means, activity_period.adults != "unknown")
+table(adult_phylo_activ$activity_period.adults)
+
+#trim tree to adult data
+rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
+name.check(tree_orig,adult_phylo_activ)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.activ;
+#plot(tree.adult.activ)
+#Remove excess data from species not found in tree
+adult_phylo_activ<-adult_phylo_activ[ ! adult_phylo_activ$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_activ[] <- lapply(adult_phylo_activ, function(x) if(is.factor(x)) factor(x) else x)
+adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
+
+
+#procD.pgls of adult eye shape (all 3 measures) by ecology
+procD<-procD.pgls(adult_phylo_eco[,c(30:32)]~adult_ecology.adults, tree.adult.eco, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_phylo_eco, print.progress = TRUE)
+summary(procD)
+
+#procD.pgls of adult eye shape (all 3 measures) by activity
+procD<-procD.pgls(adult_phylo_activ[,c(30:32)]~activity_period.adults, tree.adult.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_phylo_activ, print.progress = TRUE)
+summary(procD)
+
+```
+
+```{r adult lens size by eco while accounting for eye size}
+
+table(adult_eye_eco$adult_ecology)
+
+#PGLS of lens size relative to eye_eco size ecology ~ activity (adult only)
+procD<-procD.pgls(mean.lens.diameter~mean.eye.diameter + adult_ecology, tree_adult_eye_eco, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_eco, print.progress = TRUE)
+summary(procD)
+
+#pairwise comparisons
+PairActivTest<-pairwise(procD, fit.null = NULL, adult_eye_eco$adult_ecology, covariate = NULL, print.progress = FALSE)
+summary(PairActivTest)
+
+#PGLS of lens size relative to eye size ~ activity (adult only)
+procD<-procD.pgls(mean.lens.diameter~mean.eye.diameter + activity_period, tree.eye.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_activ, print.progress = TRUE)
+summary(procD)
+  
+#pairwise comparisons
+PairActivTest<-pairwise(procD, fit.null = NULL, adult_eye_activ$activity_period, covariate = NULL, print.progress = FALSE)
+summary(PairActivTest)
+
+```
+
+# Figures
+
+# Figure 1 : Panel A - PCA of tadpoles vs adults, Panel B - Violin of 3 shape metrics by tadpole and adult
+
+```{r Figure 1}
+
+##########################################
+#Panel A: tadpole and adult lens shape PCA
+##########################################
+
+#put PCA results into dataframe format
+df_pca <- as.data.frame(lens.pca$x) 
+
+#add a group column by breaking apart the rownames from the original dataframe
+df_pca$group <- sapply(strsplit(as.character(row.names(species_stage_means)), "_"),  "[", 1)
+
+#extract loadings of the variables
+pca_loadings <- data.frame(Variables = rownames(lens.pca$rotation), lens.pca$rotation)
+
+#make ggpolot of results
+plot_pca <- ggplot(df_pca, 
+                   aes(x = PC1, y = PC2)) +
+  geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = (PC1*4), # adds arrows - eigenvectors
+                                        yend = (PC2*4)), arrow = arrow(length = unit(1/2, "picas")),
+               color = "black") +
+  geom_point(aes(color=group)) + 
+  #scale_shape_manual(values=c(19,1)) +
+  scale_color_manual(values=c("black","grey")) +
+  # annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) adds eigenvector labels. Not using in this case because too hard to position
+  stat_ellipse(aes(x=PC1, y=PC2), type = "norm") + # adds elliptical clusters
+  xlab("PC 1 (53%)") + 
+  ylab("PC 2 (33%)") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(), 
+        panel.border = element_rect(fill= "transparent"))
+
+plot_pca
+
+########################################################
+#Panel B: violin of 3 shape metrics by tadpole and adult
+########################################################
+
+#put specimen data into long format for plotting
+value <- species_stage_means$mean_anisotropy
+stage <- species_stage_means$life_stage
+metric <- "anisotropy"
+shape1 <- data.frame(metric, value, stage)
+
+value <- species_stage_means$mean_sphericity
+stage <- species_stage_means$life_stage
+metric <- "sphericity"
+shape3 <- data.frame(metric, value, stage)
+
+value <- species_stage_means$mean_elongation
+stage <- species_stage_means$life_stage
+metric <- "elongation"
+shape4 <- data.frame(metric, value, stage)
+
+shape.final <- rbind(shape1, shape3, shape4)
+
+# extract artificial objects from raw dataset
+objects <- lens_data %>%
+  filter(life_stage == "artificial")
+
+# make same long form dataset for objects
+value <- objects$anisotropy
+type <- objects$specimen_id
+stage<- objects$life_stage
+metric <- "anisotropy"
+shape1 <- data.frame(metric, value, type, stage)
+
+value <- objects$sphericity
+type <- objects$specimen_id
+metric <- "sphericity"
+shape3 <- data.frame(metric, value, type, stage)
+
+value <- objects$elongation
+type <- objects$specimen_id
+metric <- "elongation"
+shape4 <- data.frame(metric, value, type, stage)
+
+object.final <- rbind(shape1, shape3, shape4)
+
+
+shape.plot <- ggplot(data = shape.final,
+                     aes(x = metric, y = value)) +
+  geom_violin(notch = FALSE, outlier.shape = NA) + #controls boxes
+  geom_jitter(aes(col = stage), shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) + #controls what stats shown
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Shape Metric") +
+  ylab("Value") +
+  geom_jitter(data = object.final, aes(x = metric, y = value, shape = type), position = position_jitter(0))
+
+#make plot
+shape.plot <- ggplot(data = shape.final, aes(x = metric, y = value)) +
+  scale_fill_manual(values=c("black", "white"))+
+  scale_color_manual(values = c("black", "grey")) +
+  #scale_shape_manual(values=c(19,1)) +
+  geom_violin(aes(fill=stage), alpha=0.8, trim = T, position = position_dodge(1) ) +
+  #stat_summary(fun = mean, colour="black", geom="point", shape=18, size=10, show.legend = T,position = position_dodge(0.9) ) + #controls what stats shown
+  geom_boxplot(aes(color = stage), width = 0.1, position = position_dodge(1)) + #controls boxes
+  geom_jitter(aes(col = stage), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  xlab("Shape Metric") +
+  ylab("Value") +
+  geom_jitter(data = object.final, aes(x = metric, y = value, shape = type), position = position_jitter(0), size=3)
+
+shape.plot 
+
+#If you want to make the points dodge + jitter
+#position = position_jitterdodge(jitter.width = 0.5,jitter.height = 0, dodge.width = 0.9,seed = NA))  #adds data 
+
+library(gridExtra)
+
+grid.arrange(plot_pca, shape.plot, ncol = 1, nrow = 2)
+
+#print graph
+pdf(file = "Fig1_PCA_TadVsAdult_8X10_.pdf", width = 8,  height = 10)
+grid.arrange(plot_pca, shape.plot, ncol = 1, nrow = 2)
+dev.off()
+
+```
+
+# Figure 3: PCA of tadpoles and adults coloured by microhabitat and violins of each of the 3 shape metrics by tadpole and adult
+
+```{r Figure 3}
+
+############################################################
+#PCA with all data tadpole Xs and adults Os and Eco coloured
+############################################################
+
+#add a group column by breaking apart the rownames from the original dataframe
+df_pca$stage<- species_stage_means$life_stage
+
+df_pca$eco<- species_stage_means$adult_ecology
+#add a group column by breaking apart the rownames from the original dataframe
+df_pca$group <- paste(species_stage_means$life_stage, species_stage_means$adult_ecology, sep="_") 
+
+#extract loadings of the variables
+pca_loadings <- data.frame(Variables = rownames(lens.pca$rotation), lens.pca$rotation)
+
+#make ggpolot of results
+plot_pca <- ggplot(df_pca, 
+                   aes(x = PC1, y = PC2)) +
+  geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = (PC1*4), # adds arrows - eigenvectors
+                                        yend = (PC2*4)), arrow = arrow(length = unit(1/2, "picas")),
+               color = "black") +
+  geom_point(aes(color=eco, shape=stage, cex=3)) + 
+  scale_shape_manual(values=c(19,1)) +
+  scale_color_manual(values=c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  # annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) adds eigenvector labels. Not using in this case because too hard to position
+  #stat_ellipse(aes(x=PC1, y=PC2), type = "norm") + # adds elliptical clusters
+  xlab("PC 1 (53%)") + 
+  ylab("PC 2 (33%)") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(), 
+        panel.border = element_rect(fill= "transparent"))
+
+plot_pca
+
+Eco <- species_stage_means$adult_ecology
+names(Eco)<-row.names(species_stage_means)
+EcoColr<-c("white","#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")
+names(EcoColr) <- levels(Eco)
+EcoColr<- EcoColr[match(Eco, names(EcoColr))] # col.gp must NOT be a factor
+
+Stage <- species_stage_means$life_stage
+names(Stage)<-row.names(species_stage_means)
+StageShp<-c(19,2,2,2,1)
+names(StageShp) <- levels(Stage)
+StageShp<- StageShp[match(Stage, names(StageShp))] # col.gp must NOT be a factor
+
+stageXeco<-paste(df_pca$stage,df_pca$eco,sep="_")
+
+CentroidPlot<-pca2d(lens.pca$x, group= stageXeco, shape = StageShp , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+
+#############################################
+#Violin of shape metrics by tadpole and adult
+#############################################
+
+#put specimen data into long format for plotting
+value <- species_stage_means$mean_anisotropy
+stage <- species_stage_means$life_stage
+eco<-species_stage_means$adult_ecology
+metric <- "anisotropy"
+shape1 <- data.frame(metric, value, stage, eco)
+
+value <- species_stage_means$mean_flatness
+stage <- species_stage_means$life_stage
+eco<-species_stage_means$adult_ecology
+metric <- "flatness"
+shape2 <- data.frame(metric, value, stage, eco)
+
+value <- species_stage_means$mean_sphericity
+stage <- species_stage_means$life_stage
+eco<-species_stage_means$adult_ecology
+metric <- "sphericity"
+shape3 <- data.frame(metric, value, stage, eco)
+
+value <- species_stage_means$mean_elongation
+stage <- species_stage_means$life_stage
+eco<-species_stage_means$adult_ecology
+metric <- "elongation"
+shape4 <- data.frame(metric, value, stage, eco)
+
+shape.final <- rbind(shape1, shape2, shape3, shape4)
+
+
+# split violin plot/box plot similar to Fig 5 
+flat_box_pair1 <-  ggplot(data = shape1,
+                         aes(x = eco, y = value, fill = stage),
+                         position = position_dodge(0.8)) +# control space between box plots
+geom_violin(alpha=0.9) + #controls boxes
+  scale_fill_manual(values=c("black", "white"))+
+  scale_color_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  geom_jitter(aes(col = eco), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  stat_summary(fun = mean, colour="black", geom="point", 
+               shape=18, size=3, show.legend = FALSE, position=position_dodge(0.9)) +
+  geom_point(position= position_jitterdodge(jitter.width = 0.2,jitter.height = 0, dodge.width = 0.9,seed = NA), alpha=0.7) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Anisotropy") +
+  labs(fill = "Life Stage")
+flat_box_pair1
+
+
+# split violin plot/box plot similar to Fig 5 
+flat_box_pair2 <-  ggplot(data = shape2,
+                          aes(x = eco, y = value, fill = stage),
+                          position = position_dodge(0.8)) +# control space between box plots
+  geom_violin(alpha=0.9) + #controls boxes
+  scale_fill_manual(values=c("black", "white"))+
+  scale_color_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  geom_jitter(aes(col = eco), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  stat_summary(fun = mean, colour="black", geom="point", 
+               shape=18, size=3, show.legend = FALSE, position=position_dodge(0.9)) +
+  geom_point(position= position_jitterdodge(jitter.width = 0.2,jitter.height = 0, dodge.width = 0.9,seed = NA), alpha=0.7) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Flatness") +
+  labs(fill = "Life Stage")
+flat_box_pair2
+
+
+# split violin plot/box plot similar to Fig 5 
+flat_box_pair3 <-  ggplot(data = shape3,
+                          aes(x = eco, y = value, fill = stage),
+                          position = position_dodge(0.8)) +# control space between box plots
+  geom_violin(alpha=0.9) + #controls boxes
+  scale_fill_manual(values=c("black", "white"))+
+  scale_color_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  geom_jitter(aes(col = eco), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  stat_summary(fun = mean, colour="black", geom="point", 
+               shape=18, size=3, show.legend = FALSE, position=position_dodge(0.9)) +
+  geom_point(position= position_jitterdodge(jitter.width = 0.2,jitter.height = 0, dodge.width = 0.9,seed = NA), alpha=0.7) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Sphericity") +
+  labs(fill = "Life Stage")
+flat_box_pair3
+
+
+# split violin plot/box plot similar to Fig 5 
+flat_box_pair4 <-  ggplot(data = shape4,
+                          aes(x = eco, y = value, fill = stage),
+                          position = position_dodge(0.8)) +# control space between box plots
+  geom_violin(alpha=0.9) + #controls boxes
+  scale_fill_manual(values=c("black", "white"))+
+  scale_color_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  geom_jitter(aes(col = eco), shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) + #adds data points to boxplot #aes(colour = metric) for colouring points
+  stat_summary(fun = mean, colour="black", geom="point", 
+               shape=18, size=3, show.legend = FALSE, position=position_dodge(0.9)) +
+  geom_point(position= position_jitterdodge(jitter.width = 0.2,jitter.height = 0, dodge.width = 0.9,seed = NA), alpha=0.7) + #this fixed the point distribution
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  xlab("Ecology") +
+  ylab("Elongation") +
+  labs(fill = "Life Stage")
+flat_box_pair4
+
+
+comboplot<-grid.arrange(flat_box_pair1, flat_box_pair3, flat_box_pair4, ncol = 1, nrow = 3)
+
+
+#print graph
+pdf(file = "Fig3a_PCA_TadVsAdult_14X8_.pdf", width = 14,  height = 8)
+pca2d(lens.pca$x, group= stageXeco, shape = StageShp , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+dev.off()
+
+pdf(file = "Fig3b_Eco_TadVsAdult_14X8_.pdf", width = 14,  height = 8)
+plot(comboplot)
+dev.off()
+
+
+pdf(file = "Fig3a_PCA_TadVsAdult_14X8_v2_.pdf", width = 14,  height = 8)
+plot_pca
+dev.off()
+
+
+pdf(file = "Fig3_TadVAdult_Eco.pdf", width = 12,  height = 8)
+grid.arrange(plot_pca, flat_box_pair1, flat_box_pair3, flat_box_pair4, ncol = 2, nrow = 2)
+dev.off()
+
+```
+
+# Figure 4: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+
+```{r Figure 4}
+
+#############
+#Microhabitat
+#############
+
+LensSize_eco<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_eco) 
+LensSize_eco<-as.data.frame(LensSize_eco$residuals)
+names(LensSize_eco)[1] <- "residuals"
+LensSize_eco$adult_ecology<-adult_eye_eco$adult_ecology
+
+#LensSize_eco$adult_ecology <- factor(LensSize_eco$adult_ecology, levels = c("aquatic","torrential","burrowing","terrestrial","arboreal"))
+
+gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecology)) + 
+  geom_violin(trim=FALSE)+
+  scale_fill_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
+  labs(title=NULL,x="Microhabitat", y = "Residual Lens Size")+
+  geom_boxplot(width=0.1, fill="white")+
+  geom_jitter(shape = 19, size = 2, alpha = 1, position = position_jitter(0.05)) + 
+  theme_classic()
+gg_eco 
+
+#################
+#Activity Pattern
+#################
+
+Lens.Eye_activ_residuals<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_activ) 
+Lens.Eye_activ_residuals$activity_period<-adult_eye_activ$activity_period
+
+LensSize_activ<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_activ) 
+LensSize_activ<-as.data.frame(LensSize_activ$residuals)
+names(LensSize_activ)[1] <- "residuals"
+LensSize_activ$activity_period<-adult_eye_activ$activity_period
+
+LensSize_activ$activity_period <- factor(LensSize_activ$activity_period, levels = c("diurnal","cathemeral","nocturnal"))
+
+gg_activ<-ggplot(LensSize_activ, aes(x=activity_period, y=residuals, fill=activity_period)) + 
+  geom_violin(trim=FALSE)+ 
+  scale_fill_manual(values=(magma(3, direction = -1))) +
+  labs(title=NULL,x="Activity Period", y = "Residual Lens Size")+
+  geom_boxplot(width=0.1, fill="white")+
+  geom_jitter(shape = 19, size = 2, alpha = 1, position = position_jitter(0.05)) + 
+  theme_classic()
+gg_activ 
+
+#print graph
+pdf(file = "Fig4_RelLensSize_.pdf", width = 6,  height = 8)
+grid.arrange(gg_eco,gg_activ, ncol = 1, nrow = 2)
+dev.off()
+
+```
