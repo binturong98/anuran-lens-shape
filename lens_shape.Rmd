@@ -666,9 +666,7 @@ summary(PairActivTest)
 
 ```{r Figure 1}
 
-##########################################
-#Panel A: tadpole and adult lens shape PCA
-##########################################
+#### Panel A: tadpole and adult lens shape PCA ####
 
 #put PCA results into dataframe format
 df_pca <- as.data.frame(lens.pca$x) 
@@ -702,9 +700,7 @@ plot_pca <- ggplot(df_pca,
 
 plot_pca
 
-########################################################
-#Panel B: violin of 3 shape metrics by tadpole and adult
-########################################################
+#### Panel B: violin of 3 shape metrics by tadpole and adult ####
 
 #put specimen data into long format for plotting
 value <- species_stage_means$mean_anisotropy
@@ -793,9 +789,7 @@ dev.off()
 
 ```{r Figure 3}
 
-############################################################
-#PCA with all data tadpole Xs and adults Os and Eco coloured
-############################################################
+#### PCA with all data tadpole Xs and adults Os and Eco coloured ####
 
 #add a group column by breaking apart the rownames from the original dataframe
 df_pca$stage<- species_stage_means$life_stage
@@ -842,9 +836,7 @@ stageXeco<-paste(df_pca$stage,df_pca$eco,sep="_")
 
 CentroidPlot<-pca2d(lens.pca$x, group= stageXeco, shape = StageShp , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 
-#############################################
-#Violin of shape metrics by tadpole and adult
-#############################################
+#### Violin of shape metrics by tadpole and adult ####
 
 #put specimen data into long format for plotting
 value <- species_stage_means$mean_anisotropy
@@ -974,9 +966,7 @@ dev.off()
 
 ```{r Figure 4}
 
-#############
-#Microhabitat
-#############
+#### Microhabitat ####
 
 LensSize_eco<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_eco) 
 LensSize_eco<-as.data.frame(LensSize_eco$residuals)
@@ -994,9 +984,7 @@ gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecolog
   theme_classic()
 gg_eco 
 
-#################
-#Activity Pattern
-#################
+#### Activity Pattern ####
 
 Lens.Eye_activ_residuals<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_activ) 
 Lens.Eye_activ_residuals$activity_period<-adult_eye_activ$activity_period
