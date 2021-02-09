@@ -418,7 +418,7 @@ lens.pca$rotation
 # eigenvalues 
 (lens.pca$sdev)^2
 
-#plot directly
+# plot directly
 plot(lens.pca$x[,1], lens.pca$x[,2])
 
 ```
@@ -782,6 +782,54 @@ grid.arrange(plot_pca, shape.plot, ncol = 1, nrow = 2)
 pdf(file = "Fig1_PCA_TadVsAdult_8X10_.pdf", width = 8,  height = 10)
 grid.arrange(plot_pca, shape.plot, ncol = 1, nrow = 2)
 dev.off()
+
+```
+
+# Figure 2 : Phylogeny with PC scores. Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
+
+```{r Figure 2}
+
+# Extracting PC scores
+PC1_tad<-phylo_pca_means$mean_PC1.tads
+names(PC1_tad)<-phylo_pca_means$genus_species
+PC1_tad<-PC1_tad[tree.pruned$tip.label]
+
+PC1_adult<-phylo_pca_means$mean_PC1.adults
+names(PC1_adult)<-phylo_pca_means$genus_species
+PC1_adult<-PC1_adult[tree.pruned$tip.label]
+
+
+# Plot tree
+plot(tree.pruned, show.tip.label= T, font=3, cex=0.5, label.offset = 1.5, edge.width=3)
+segments(340 + (PC1_tad*40), 1:nrow(phylo_pca_means), 340 + (PC1_adult*10), 1:nrow(phylo_pca_means), col="grey90", lwd=5)
+segments(340 + (PC1_tad*40), 1:nrow(phylo_pca_means), 340 + (PC1_tad*40), 1:nrow(phylo_pca_means), col="grey", lwd=5)
+segments(340 + (PC1_adult*10), 1:nrow(phylo_pca_means), 340 + (PC1_adult*10), 1:nrow(phylo_pca_means), col="black", lwd=5)
+
+lastPP<-get("last_plot.phylo",env=.PlotPhyloEnv)
+
+SpEcology<-phylo_pca_means$adult_ecology.adults
+SemiEcoColr<-c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")
+names(SemiEcoColr) <- levels(SpEcology)
+SemiEcoColr<- SemiEcoColr[match(SpEcology, names(SemiEcoColr))] # col.gp must NOT be a factor
+names(SemiEcoColr)<-phylo_pca_means$genus_species
+SemiEcoColr<-SemiEcoColr[tree.pruned$tip.label]
+
+#Print graph
+
+pdf(file = "Fig2_PhylogenyPlot_.pdf", width = 6,  height = 12)
+plot(tree.pruned, show.tip.label= F, font=3, cex=0.5, label.offset = 1.5, edge.width=3, x.lim=c(0,700))
+par(fg="black")
+tt<-gsub("_"," ",tree.pruned$tip.label)
+text(lastPP$xx[1:length(tt)],lastPP$yy[1:length(tt)], tt,cex=0.5,col=SemiEcoColr, pos=4, offset=0.1, font=3)
+segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="grey90", lwd=5)
+segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_tad*50), 1:nrow(phylo_pca_means), col="grey", lwd=5)
+segments(550 + (PC1_adult*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="black", lwd=5)
+dev.off()
+
+for(i in 1:Ntip(tree.pruned)) lines(c(lastPP$xx[i],max(lastPP$xx[1:Ntip(tree.pruned)])),
+                           rep(lastPP$yy[i],2),lty="dotted")
+par(fg="transparent")
+plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
 
 ```
 
