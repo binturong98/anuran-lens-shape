@@ -29,6 +29,8 @@ library(tidyverse)
 library(geomorph)
 library(RRPP)
 library(viridis)
+library(pca3d)
+library(gridExtra)
 
 ```
 
@@ -662,7 +664,7 @@ summary(PairActivTest)
 
 # Figures
 
-# Figure 1 : Panel A - PCA of tadpoles vs adults, Panel B - Violin of 3 shape metrics by tadpole and adult
+## Figure 1 : Panel A - PCA of tadpoles vs adults, Panel B - Violin of 3 shape metrics by tadpole and adult
 
 ```{r Figure 1}
 
@@ -785,7 +787,8 @@ dev.off()
 
 ```
 
-# Figure 2 : Phylogeny with PC scores. Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
+## Figure 2 : Phylogeny with PC scores. 
+Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
 
 ```{r Figure 2}
 
@@ -833,7 +836,7 @@ plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
 
 ```
 
-# Figure 3: PCA of tadpoles and adults coloured by microhabitat and violins of each of the 3 shape metrics by tadpole and adult
+## Figure 3: PCA of tadpoles and adults coloured by microhabitat, violins of shape metrics by tadpole and adult
 
 ```{r Figure 3}
 
@@ -1010,9 +1013,96 @@ dev.off()
 
 ```
 
-# Figure 4: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+## Figure 4: Adult lens shape by ecology
 
 ```{r Figure 4}
+
+#PGLS adult eye measures vs ecology 
+adult_phylo_eco<-filter(adults_mean, adult_ecology != "unknown")
+table(adult_phylo_eco$adult_ecology)
+
+#capitalize genus 
+str_sub(adult_phylo_eco$genus_species, 1, 1) <- str_sub(adult_phylo_eco$genus_species, 1, 1) %>% str_to_upper()
+
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+adult_phylo_eco[adult_phylo_eco$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
+adult_phylo_eco[adult_phylo_eco$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
+adult_phylo_eco[adult_phylo_eco$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
+
+#trim tree to adult data
+rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
+name.check(tree_orig,adult_phylo_eco)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.eco;
+#plot(tree.adult.eco)
+#Remove excess data from species not found in tree
+adult_phylo_eco<-adult_phylo_eco[ ! adult_phylo_eco$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_eco[] <- lapply(adult_phylo_eco, function(x) if(is.factor(x)) factor(x) else x)
+rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
+adult_phylo_eco <-  adult_phylo_eco[tree.adult.eco$tip.label, ]
+
+
+adult_phylo_activ<-filter(adults_mean, activity_period != "unknown")
+table(adult_phylo_activ$activity_period)
+
+#capitalize genus 
+str_sub(adult_phylo_activ$genus_species, 1, 1) <- str_sub(adult_phylo_activ$genus_species, 1, 1) %>% str_to_upper()
+
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+adult_phylo_activ[adult_phylo_activ$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
+adult_phylo_activ[adult_phylo_activ$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
+adult_phylo_activ[adult_phylo_activ$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
+
+#trim tree to adult data
+rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
+name.check(tree_orig,adult_phylo_activ)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.activ;
+#plot(tree.adult.activ)
+#Remove excess data from species not found in tree
+adult_phylo_activ<-adult_phylo_activ[ ! adult_phylo_activ$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_activ[] <- lapply(adult_phylo_activ, function(x) if(is.factor(x)) factor(x) else x)
+rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
+adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
+
+#### Microhabitat ####
+eco.pca <- prcomp(adult_phylo_eco[,12:14], center = TRUE, scale. = TRUE)
+
+Eco <- adult_phylo_eco$adult_ecology
+names(Eco)<-row.names(adult_phylo_eco)
+EcoColr<-c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","white")
+names(EcoColr) <- levels(Eco)
+EcoColr<- EcoColr[match(Eco, names(EcoColr))] # col.gp must NOT be a factor
+
+ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+
+#### Activity Pattern ####
+activ.pca <- prcomp(adult_phylo_activ[,12:14], center = TRUE, scale. = TRUE)
+
+activ <- adult_phylo_activ$activity_period
+names(activ)<-row.names(adult_phylo_activ)
+activColr<-c(values=(magma(3, direction = -1)))
+names(activColr) <- levels(activ)
+activColr<- activColr[match(activ, names(activColr))] # col.gp must NOT be a factor
+
+activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+
+par(mfrow=c(2,1))
+ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+
+#print graph
+pdf(file = "Fig4_Adult_LensShape_Eco&Activity_PCA.pdf", width = 8,  height = 10, useDingbats=FALSE)
+par(mfrow=c(2,1))
+ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+dev.off()
+
+```
+
+## Figure 5: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+
+```{r Figure 5}
 
 #### Microhabitat ####
 
@@ -1054,7 +1144,7 @@ gg_activ<-ggplot(LensSize_activ, aes(x=activity_period, y=residuals, fill=activi
 gg_activ 
 
 #print graph
-pdf(file = "Fig4_RelLensSize_.pdf", width = 6,  height = 8)
+pdf(file = "Fig5_RelLensSize_.pdf", width = 6,  height = 8)
 grid.arrange(gg_eco,gg_activ, ncol = 1, nrow = 2)
 dev.off()
 
