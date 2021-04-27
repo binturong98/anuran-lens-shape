@@ -211,6 +211,31 @@ filter(life_stage == "repeat" & specimen_id != "USNM299711")
   
 ```
 
+## coefficient of variation
+
+The coefficient of variation (CV) is the ratio of the standard deviation to the mean. The higher the coefficient of variation, the greater the level of dispersion around the mean.
+
+``` {r calculating cv}
+
+lens_repeat %>%
+  group_by(specimen_id) %>%
+  summarise(coef.var.flat = (sd(flatness)/mean(flatness))*100,
+            coef.var.aniso = (sd(anisotropy)/mean(anisotropy))*100,
+            coef.var.spher = (sd(sphericity)/mean(sphericity))*100,
+            coef.var.elong = (sd(elongation)/mean(elongation))*100)
+
+# The coefficients of variation for all the measures are quite low < 10 %
+
+# CVs calculated for the entire dataset show much higer variation so it is okay to use this method 
+species_stage_means %>%
+  group_by()%>%
+  summarise(coef.var.flat = (sd(mean_flatness)/mean(mean_flatness))*100,
+            coef.var.aniso = (sd(mean_anisotropy)/mean(mean_anisotropy))*100,
+            coef.var.spher = (sd(mean_sphericity)/mean(mean_sphericity))*100,
+            coef.var.elong = (sd(mean_elongation)/mean(mean_elongation))*100)
+
+```
+
 The following creates a dataframe with **one row per specimen**. Shape data for **each lens** are in **separate columns**. The dataframe is then split into two; One for left lenses and one for right lenses. These dataframes contain data for anurans only.
 
 ```{r left-right-wide}
