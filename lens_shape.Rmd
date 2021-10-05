@@ -857,16 +857,17 @@ plots_bottom <- plot_grid(anis.plot, spher.plot, elong.plot,
 grid.arrange(plot_top, plots_bottom, ncol = 1, nrow = 2)
 
 #export figure
-pdf(file = "Figures/Fig2.pdf", width = 8,  height = 10)
+pdf(file = "Figures/Fig2.pdf", width = 6,  height = 8)
 grid.arrange(plot_top, plots_bottom, ncol = 1, nrow = 2)
 dev.off()
 ```
 
 
-## Figure 2 : Phylogeny with PC scores. 
+## Figure 3 : Phylogeny with PC scores. 
+
 Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
 
-```{r Figure 2}
+```{r Figure 2, fig.height = 12, fig.width = 6}
 
 # Extracting PC scores
 PC1_tad<-phylo_pca_means$mean_PC1.tads
@@ -894,8 +895,16 @@ names(SemiEcoColr)<-phylo_pca_means$genus_species
 SemiEcoColr<-SemiEcoColr[tree.pruned$tip.label]
 
 #Print graph
+plot(tree.pruned, show.tip.label= F, font=3, cex=0.5, label.offset = 1.5, edge.width=3, x.lim=c(0,700))
+par(fg="black")
+tt<-gsub("_"," ",tree.pruned$tip.label)
+text(lastPP$xx[1:length(tt)],lastPP$yy[1:length(tt)], tt,cex=0.5,col=SemiEcoColr, pos=4, offset=0.1, font=3)
+segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="grey90", lwd=5)
+segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_tad*50), 1:nrow(phylo_pca_means), col="grey", lwd=5)
+segments(550 + (PC1_adult*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="black", lwd=5)
 
-pdf(file = "Fig2_PhylogenyPlot_.pdf", width = 6,  height = 12)
+#Export figure
+pdf(file = "Figures/Fig3.pdf", width = 6,  height = 12)
 plot(tree.pruned, show.tip.label= F, font=3, cex=0.5, label.offset = 1.5, edge.width=3, x.lim=c(0,700))
 par(fg="black")
 tt<-gsub("_"," ",tree.pruned$tip.label)
@@ -905,11 +914,11 @@ segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_tad*50), 1:nrow
 segments(550 + (PC1_adult*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="black", lwd=5)
 dev.off()
 
-for(i in 1:Ntip(tree.pruned)) lines(c(lastPP$xx[i],max(lastPP$xx[1:Ntip(tree.pruned)])),
-                           rep(lastPP$yy[i],2),lty="dotted")
-par(fg="transparent")
-plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
-
+# I think this is not used
+# for(i in 1:Ntip(tree.pruned)) lines(c(lastPP$xx[i],max(lastPP$xx[1:Ntip(tree.pruned)])),
+#                            rep(lastPP$yy[i],2),lty="dotted")
+# par(fg="transparent")
+# plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
 ```
 
 ## Figure 3: PCA of tadpoles and adults coloured by microhabitat, violins of shape metrics by tadpole and adult
