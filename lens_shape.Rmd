@@ -52,7 +52,7 @@ tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
 
 ## Mean lens shape by specimen
 
-The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes outgroups and reference blender shapes. 
+The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes reference blender shapes. 
 ```{r specimen-means}
 
 #Calculate mean lens parameters for each specimen
@@ -83,7 +83,7 @@ The following creates a dataframe with **one row per life stage for a species**.
 ```{r species-stage-means}
 
 species_stage_means <- specimen_means%>%
-  filter(life_stage != "outgroup" & life_stage != "artificial") %>%
+  filter(life_stage != "artificial") %>%
   group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
   summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
             mean_area = mean(mean_area, na.rm = TRUE),
@@ -120,7 +120,7 @@ species_means <- full_join(tads_mean, adults_mean,
 
 ## Species with eye size data
 
-This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
+This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles.The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
 
 ```{r subsets for eye data in anura only - activity and ecology}
 
@@ -142,7 +142,7 @@ eye_mean[eye_mean == "NaN"] <- NA
 
 # subsetting for adults 
 adult_eye <- eye_mean %>%
-  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole") %>%
+  filter(life_stage != "artificial" & life_stage != "tadpole") %>%
   mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter) %>%
   filter(lens_relative_to_eye > 0)
 
@@ -243,7 +243,7 @@ The following creates a dataframe with **one row per specimen**. Shape data for 
 # dataframe that averages by specimen
 LR_lens_data <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
-  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62" & life_stage != "outgroup" & life_stage != "artificial") %>%
+  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62" & life_stage != "artificial") %>%
   mutate_if(is.character, as.factor) %>% 
   group_by(specimen_id, genus_species, lens, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
   summarise(mean_volume = mean(volume_mm3, na.rm = TRUE),
