@@ -807,8 +807,6 @@ shape.plot
 #If you want to make the points dodge + jitter
 #position = position_jitterdodge(jitter.width = 0.5,jitter.height = 0, dodge.width = 0.9,seed = NA))  #adds data 
 
-library(gridExtra)
-
 grid.arrange(plot_pca, shape.plot, ncol = 1, nrow = 2)
 
 #print graph
