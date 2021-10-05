@@ -378,6 +378,12 @@ lm(mean_anisotropy~mean_svl, data = species_stage_means)
 lm(mean_flatness~mean_svl, data = species_stage_means)
 lm(mean_elongation~mean_svl, data = species_stage_means)
 
+par(mfrow=c(2, 2))
+plot(mean_sphericity~mean_svl, data = species_stage_means)
+plot(mean_anisotropy~mean_svl, data = species_stage_means)
+plot(mean_flatness~mean_svl, data = species_stage_means)
+plot(mean_elongation~mean_svl, data = species_stage_means)
+
 pdf(file = "LensShapes_BySVL_.pdf", width = 9,  height = 7)
 par(mfrow=c(2, 2))
 plot(mean_sphericity~mean_svl, data = species_stage_means)
