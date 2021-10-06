@@ -47,12 +47,12 @@ lens_data <- read.csv("ct_lenses.csv", header = TRUE)
 
 #Import phylogeny from Jetz and Pyron 2019
 tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
-
 ```
 
 ## Mean lens shape by specimen
 
 The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes reference blender shapes. 
+
 ```{r specimen-means}
 
 #Calculate mean lens parameters for each specimen
@@ -699,7 +699,7 @@ summary(PairActivTest)
 
 Panel A - PCA of tadpoles vs adults across all specimens, Panel B - Violin plots of species means for 3 shape metrics by tadpole and adult life stages
 
-```{r Figure 1}
+```{r Figure 2}
 
 #### Panel A: tadpole and adult lens shape PCA ####
 
@@ -867,7 +867,7 @@ dev.off()
 
 Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
 
-```{r Figure 2, fig.height = 12, fig.width = 6}
+```{r Figure 3, fig.height = 12, fig.width = 6}
 
 # Extracting PC scores
 PC1_tad<-phylo_pca_means$mean_PC1.tads
@@ -921,7 +921,7 @@ dev.off()
 # plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
 ```
 
-## Figure 3: PCA of tadpoles and adults coloured by microhabitat, violins of shape metrics by tadpole and adult
+## Figure 4 - Original version: PCA of tadpoles and adults coloured by microhabitat, violins of shape metrics by tadpole and adult
 
 ```{r Figure 3}
 
@@ -1098,13 +1098,128 @@ dev.off()
 
 ```
 
-## Figure 4: Adult lens shape by ecology
+## Figure 4 - New version: Species with matched tadpole and adult lens shape data across adult habitats. 
 
-```{r Figure 4}
+```{r Figure 4new}
 
-#PGLS adult eye measures vs ecology 
+#### Violin of shape metrics by paired tadpole and adult ####
+
+#put data in long format
+tadData <- data.frame(species = both_phylo_means$genus_species,
+                      anisotropy = both_phylo_means$mean_anisotropy.tads,
+                      sphericity = both_phylo_means$mean_sphericity.tads,
+                      elongation = both_phylo_means$mean_elongation.tads,
+                      eco = both_phylo_means$adult_ecology.tads,
+                      stage = "tadpole")
+
+adultData <- data.frame(species = both_phylo_means$genus_species,
+                        anisotropy = both_phylo_means$mean_anisotropy.adults,
+                        sphericity = both_phylo_means$mean_sphericity.adults,
+                        elongation = both_phylo_means$mean_elongation.adults,
+                        eco = both_phylo_means$adult_ecology.adults,
+                        stage = "adult")
+
+matchData <- rbind(tadData, adultData)
+matchData$stage <- factor(matchData$stage, levels = c("tadpole", "adult"))
+matchData$eco <- factor(matchData$eco, levels = c("aquatic","fossorial","subfossorial","semi-aquatic","ground-dwelling","scansorial"))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_hab <- c("aquatic" = "#0072B2",
+              "fossorial" = "#D55E00",
+              "ground-dwelling" = "#E69F00",
+              "scansorial" = "#009E73",
+              "semi-aquatic" = "#56B4E9",
+              "subfossorial" = "#CC79A7")
+
+shape_stage <- c("tadpole" = 1,
+                 "adult" = 19)
+
+#plot matched data for anisotropy
+ggplot(matchData, aes(x = stage, y = anisotropy, col = eco)) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_point(size = 3, alpha = 0.8, aes(shape = stage)) + 
+  geom_line(aes(group = species, col = eco)) +
+  labs(x = "Life stage", y = "Anisotropy") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none")
+  
+  
+#plot matched data separated by adult habitats
+
+#anisotropy
+an.paired.plot <- ggplot(matchData, aes(x = stage, y = anisotropy, col = eco)) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
+  geom_line(aes(group = species, col = eco), alpha = 0.5) +
+  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
+  labs(x = "Life stage", y = "Anisotropy") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~eco)
+  
+#sphericity
+sp.paired.plot <- ggplot(matchData, aes(x = stage, y = sphericity, col = eco)) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
+  geom_line(aes(group = species, col = eco), alpha = 0.5) +
+  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
+  labs(x = "Life stage", y = "Sphericity") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~eco)
+
+#elongation
+el.paired.plot <- ggplot(matchData, aes(x = stage, y = elongation, col = eco)) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
+  geom_line(aes(group = species, col = eco), alpha = 0.5) +
+  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
+  labs(x = "Life stage", y = "Elongation") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~eco)
+
+# Construct main figure -------
+
+plots <- plot_grid(an.paired.plot, sp.paired.plot,
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("A", "B"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 2) #number of rows in grids
+
+#print figure
+plots
+
+#export figure
+pdf(file = "Figures/Fig4.pdf", width = 8,  height = 12)
+plots
+dev.off()
+
+# Supplemental figure -------
+
+#print figure
+el.paired.plot
+
+#export figure
+pdf(file = "Figures/Fig-supp-paired.pdf", width = 8,  height = 6)
+el.paired.plot
+dev.off()
+```
+
+
+## Figure 5: Adult lens shape by ecology
+
+Part 1: PCA centroids for adult lens shape vs ecology (habitat and activity period)
+
+```{r Figure 5ab}
+
+#adult eye measures vs habitat 
 adult_phylo_eco<-filter(adults_mean, adult_ecology != "unknown")
-table(adult_phylo_eco$adult_ecology)
+#table(adult_phylo_eco$adult_ecology)
 
 #capitalize genus 
 str_sub(adult_phylo_eco$genus_species, 1, 1) <- str_sub(adult_phylo_eco$genus_species, 1, 1) %>% str_to_upper()
@@ -1126,7 +1241,7 @@ adult_phylo_eco[] <- lapply(adult_phylo_eco, function(x) if(is.factor(x)) factor
 rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
 adult_phylo_eco <-  adult_phylo_eco[tree.adult.eco$tip.label, ]
 
-
+# adult eye data with activity pattern
 adult_phylo_activ<-filter(adults_mean, activity_period != "unknown")
 table(adult_phylo_activ$activity_period)
 
@@ -1150,7 +1265,7 @@ adult_phylo_activ[] <- lapply(adult_phylo_activ, function(x) if(is.factor(x)) fa
 rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
 adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
 
-#### Microhabitat ####
+#### Habitat ####
 eco.pca <- prcomp(adult_phylo_eco[,12:14], center = TRUE, scale. = TRUE)
 
 Eco <- adult_phylo_eco$adult_ecology
@@ -1161,33 +1276,151 @@ EcoColr<- EcoColr[match(Eco, names(EcoColr))] # col.gp must NOT be a factor
 
 ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 
+legend("bottomright", ecoPlot$groups, col=ecoPlot$colors, pch=ecoPlot$pch, box.lty=0)
+
 #### Activity Pattern ####
 activ.pca <- prcomp(adult_phylo_activ[,12:14], center = TRUE, scale. = TRUE)
 
 activ <- adult_phylo_activ$activity_period
 names(activ)<-row.names(adult_phylo_activ)
-activColr<-c(values=(magma(3, direction = -1)))
+activColr<-c("#CD1076","#FFB90F","#8A2BE2")
+#activColr<-c(values=(magma(3, direction = -1)))
 names(activColr) <- levels(activ)
 activColr<- activColr[match(activ, names(activColr))] # col.gp must NOT be a factor
 
 activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 
-par(mfrow=c(2,1))
-ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
-activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch, box.lty=0)
+
+#export panels A & B-----
 
 #print graph
-pdf(file = "Fig4_Adult_LensShape_Eco&Activity_PCA.pdf", width = 8,  height = 10, useDingbats=FALSE)
-par(mfrow=c(2,1))
+pdf(file = "Figures/Fig5AB.pdf", width = 12,  height = 5, useDingbats=FALSE)
+par(mfrow=c(1,2))
 ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 dev.off()
 
 ```
 
-## Figure 5: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+Part 2: Violin plots of adult lens shape across ecology (habitat and activity period)
 
-```{r Figure 5}
+```{r Figure 5cd}
+
+#create vector of colors for activity period
+col_act <- c("both" = "deeppink3",
+             "diurnal" = "darkgoldenrod1", 
+             "nocturnal" = "blueviolet")
+
+#adjust naming of categories
+adult_phylo_activ <- adult_phylo_activ %>%
+  mutate(activity_period = recode(activity_period, "cathemeral" = "both"))
+
+# Adult habitat ------
+
+#anisotropy
+anis_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_anisotropy, fill=adult_ecology)) + 
+  geom_violin(trim=FALSE, alpha = 0.7)+
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+  labs(title=NULL,x="Habitat", y = "Anisotropy value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+ 
+#sphericity
+sph_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_sphericity, fill=adult_ecology)) + 
+  geom_violin(trim=FALSE, alpha = 0.7)+
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+  labs(title=NULL,x="Habitat", y = "Sphericity value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+
+#elongation
+elong_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_elongation, fill=adult_ecology)) + 
+  geom_violin(trim=FALSE, alpha = 0.7)+
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+  labs(title=NULL,x="Habitat", y = "Elongation value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+
+# Adult activity period ------
+#anisotropy
+anis_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_anisotropy, fill=activity_period)) + 
+  geom_violin(trim=FALSE, alpha = 0.5)+
+  scale_fill_manual(values = col_act, name = "Adult activity period") +
+  labs(title=NULL,x="Activity Period", y = "Anisotropy value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+ 
+#sphericity
+sph_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_sphericity, fill=activity_period)) + 
+  geom_violin(trim=FALSE, alpha = 0.5)+
+  scale_fill_manual(values = col_act, name = "Adult activity period") +
+  labs(title=NULL,x="Activity Period", y = "Sphericity value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+
+#elongation
+elong_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_elongation, fill=activity_period)) + 
+  geom_violin(trim=FALSE, alpha = 0.5)+
+  scale_fill_manual(values = col_act, name = "Adult activity period") +
+  labs(title=NULL,x="Activity Period", y = "Elongation value")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
+  theme_classic()
+
+# Construct main figure -----
+
+#make panels without lengends
+fig.c <- anis_habs + theme(legend.position = "none")
+fig.e <- sph_habs + theme(legend.position = "none")
+fig.d <- anis_act + theme(legend.position = "none")
+fig.f <- sph_act + theme(legend.position = "none")
+
+#make panels just with anisotropy and sphericity for habitat and activity period
+plots <- plot_grid(fig.c, fig.d, fig.e, fig.f,
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("C", "D", "E", "F"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 2) #number of rows in grids
+
+#print figure
+plots
+
+#export figure
+pdf(file = "Figures/Fig5cdef.pdf", width = 12,  height = 8)
+plots
+dev.off()
+
+# Supplemental figure -----
+
+#make panels with elongation for habitat and activity period
+plots <- plot_grid(elong_habs + theme(legend.position = "none"), 
+                   elong_act + theme(legend.position = "none"),
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("A", "B"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 1) #number of rows in grids
+
+#print figure
+plots
+
+#export figure
+pdf(file = "Figures/Fig-supp-adultelong.pdf", width = 12,  height = 4)
+plots
+dev.off()
+```
+
+
+## Figure 6: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+
+```{r Figure 6}
 
 #### Microhabitat ####
 
@@ -1196,7 +1429,6 @@ LensSize_eco<-as.data.frame(LensSize_eco$residuals)
 names(LensSize_eco)[1] <- "residuals"
 LensSize_eco$adult_ecology<-adult_eye_eco$adult_ecology
 
-#LensSize_eco$adult_ecology <- factor(LensSize_eco$adult_ecology, levels = c("aquatic","torrential","burrowing","terrestrial","arboreal"))
 
 gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecology)) + 
   geom_violin(trim=FALSE)+
