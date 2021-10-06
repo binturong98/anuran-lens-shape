@@ -923,7 +923,7 @@ dev.off()
 
 ## Figure 4 - Original version: PCA of tadpoles and adults coloured by microhabitat, violins of shape metrics by tadpole and adult
 
-```{r Figure 3}
+```{r Figure 4}
 
 #### PCA with all data tadpole Xs and adults Os and Eco coloured ####
 
@@ -1422,7 +1422,7 @@ dev.off()
 
 ```{r Figure 6}
 
-#### Microhabitat ####
+#### Habitat ####
 
 LensSize_eco<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_eco) 
 LensSize_eco<-as.data.frame(LensSize_eco$residuals)
@@ -1431,12 +1431,13 @@ LensSize_eco$adult_ecology<-adult_eye_eco$adult_ecology
 
 
 gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecology)) + 
-  geom_violin(trim=FALSE)+
-  scale_fill_manual(values = c("#0072B2","#D55E00","#E69F00","#009E73","#56B4E9","#CC79A7","grey")) +
-  labs(title=NULL,x="Microhabitat", y = "Residual Lens Size")+
-  geom_boxplot(width=0.1, fill="white")+
-  geom_jitter(shape = 19, size = 2, alpha = 1, position = position_jitter(0.05)) + 
+  geom_violin(trim=FALSE, alpha = 0.5)+
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+  labs(title=NULL,x="Habitat", y = "Residual Lens Size")+
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic()
+
 gg_eco 
 
 #### Activity Pattern ####
@@ -1450,19 +1451,33 @@ names(LensSize_activ)[1] <- "residuals"
 LensSize_activ$activity_period<-adult_eye_activ$activity_period
 
 LensSize_activ$activity_period <- factor(LensSize_activ$activity_period, levels = c("diurnal","cathemeral","nocturnal"))
+LensSize_activ$activity_period <- recode(LensSize_activ$activity_period, "cathemeral" = "both")
 
 gg_activ<-ggplot(LensSize_activ, aes(x=activity_period, y=residuals, fill=activity_period)) + 
-  geom_violin(trim=FALSE)+ 
-  scale_fill_manual(values=(magma(3, direction = -1))) +
+  geom_violin(trim=FALSE, alpha = 0.5)+
+  scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Residual Lens Size")+
-  geom_boxplot(width=0.1, fill="white")+
-  geom_jitter(shape = 19, size = 2, alpha = 1, position = position_jitter(0.05)) + 
+  geom_boxplot(width=0.15, fill="white")+
+  geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic()
+
 gg_activ 
 
+#Construct figure----
+
+plots <- plot_grid(gg_eco + theme(legend.position = "none"), 
+                   gg_activ + theme(legend.position = "none"),
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("A", "B"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 1) #number of rows in grids
+
+plots
+
 #print graph
-pdf(file = "Fig5_RelLensSize_.pdf", width = 6,  height = 8)
-grid.arrange(gg_eco,gg_activ, ncol = 1, nrow = 2)
+pdf(file = "Figures/Fig6.pdf", width = 12,  height = 4)
+plots
 dev.off()
 
 ```
