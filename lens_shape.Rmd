@@ -102,12 +102,7 @@ The following creates a dataframe with **one row per life stage for a species**.
 species_stage_means <- specimen_means %>%
   filter(life_stage != "artificial") %>%
   group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
-  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
-            mean_area = mean(mean_area, na.rm = TRUE),
-            mean_breadth = mean(mean_breadth, na.rm = TRUE),
-            mean_length = mean(mean_length, na.rm = TRUE),
-            mean_width = mean(mean_width, na.rm = TRUE),
-            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+  summarise(mean_flatness = mean(mean_flatness, na.rm = TRUE),
             mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
             mean_elongation = mean(mean_elongation, na.rm = TRUE),
             mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
