@@ -151,7 +151,7 @@ This dataframe pulls out the specimens that we were able to get 2D eye size meas
 
 ```{r subsets for eye data in anura only - activity and ecology}
 
-#create dataframe for eye subset
+#create dataframe for specimens with eye size data
 eye_mean <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
   mutate_if(is.character, as.factor) %>% 
@@ -180,8 +180,6 @@ str_sub(adult_eye$genus_species, 1, 1) <- str_sub(adult_eye$genus_species, 1, 1)
 adult_eye[adult_eye$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 adult_eye[adult_eye$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 adult_eye[adult_eye$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
-
-View(adult_eye)
 
 
 # Make tree-trimmed dataset for ecology analysis of lens size 
@@ -227,20 +225,20 @@ adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
 
 # Data checks
 
-## Repeat measures
+## Repeat measurements
 
 The following dataframe subsets the specimens and lenses that were measured multiple times independently in order to determine the precision of measurement techniques. 
 
 ```{r subset to dataframe for repeat measures}
 
 lens_repeat <- lens_data %>%
-filter(life_stage == "repeat" & specimen_id != "USNM299711")
+  filter(life_stage == "repeat" & specimen_id != "USNM299711")
   
 ```
 
-## coefficient of variation
+## Coefficient of variation
 
-The coefficient of variation (CV) is the ratio of the standard deviation to the mean. The higher the coefficient of variation, the greater the level of dispersion around the mean.
+The coefficient of variation (CV) is the ratio of the standard deviation to the mean. The higher the coefficient of variation, the greater the level of dispersion around the mean. Here, we compare the coefficients of variation for repeat measures within one specimen to the coefficients of variation across the full dataset. 
 
 ``` {r calculating cv}
 
@@ -262,6 +260,8 @@ species_stage_means %>%
             coef.var.elong = (sd(mean_elongation)/mean(mean_elongation))*100)
 
 ```
+
+## Left lens vs. right lens
 
 The following creates a dataframe with **one row per specimen**. Shape data for **each lens** are in **separate columns**. The dataframe is then split into two; One for left lenses and one for right lenses. These dataframes contain data for anurans only.
 
