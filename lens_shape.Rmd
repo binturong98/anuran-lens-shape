@@ -1,6 +1,6 @@
 ---
-title: "Lens morphology is influenced by ecology in frogs and toads"
-authors: "A.T. Mitra, K.T. Thomas, M.C Womack"
+title: "Analyses for: Lens morphology is influenced by ecology in frogs and toads"
+authors: "A.T. Mitra, K.N. Thomas, M.C. Womack"
 date: "5 Oct 2021"
 output:
   html_document:
@@ -38,7 +38,7 @@ library(gridExtra)
 
 ## Raw data
 
-The raw data file contains one row for **each lens** sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way. The tree_orig file contains the Jetz and Pyron 2019 phylogeny.
+The raw data file contains one row for **each lens** sampled. For most specimens, there are two rows of data: one for the right lens and one for the left lens. However, for a few specimens, we repeated measurements on the lenses independently to quantify error, and these are included as separate rows. The raw data file also includes measurements from four artificial objects created in Blender for reference measurements. These are all coded as life stage "artificial", and can be removed or extracted that way. The phylogeny data is the consensus tree from Jetz and Pyron (2019).
 
 ```{r raw-data}
 
@@ -51,7 +51,7 @@ tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
 
 ## Mean lens shape by specimen
 
-The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes reference blender shapes. 
+The following subset includes one row for **each specimen** measured. We created this subset by removing repeated measurements of the same lens, and then calculating the mean of the left and right lens for each specimen. This subset also includes artificial reference blender shapes. 
 
 ```{r specimen-means}
 
@@ -60,7 +60,7 @@ specimen_means <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
   mutate_if(is.character, as.factor) %>% 
-  group_by(specimen_id, genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  group_by(specimen_id, genus_species, family, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
   summarise(mean_volume = mean(volume_mm3, na.rm = TRUE),
             mean_area = mean(area_mm2, na.rm = TRUE),
             mean_breadth = mean(breadth_mm, na.rm = TRUE),
@@ -73,8 +73,30 @@ specimen_means <- lens_data %>%
             mean_svl = mean(sv_length_mm, na.rm = TRUE),
             n = n()) %>%
   ungroup() 
-
 ```
+
+Here, we report summary data on specimen sampling (after removing the 4 artificial reference objects created in Blender). Note that the specimen ID "MS2_top" refers to both a tadpole and an adult specimen, and is a duplicated element (thus there is one less factor level for specimen ID than there are actual unique specimens).
+
+```{r}
+#remove artificial objects from dataset
+specimen_means2 <- specimen_means %>%
+  filter(life_stage != "artificial") %>%
+  droplevels()
+
+#save data on sampling
+n_specimen <- nrow(specimen_means2) #total number of specimens sampled
+n_adult_specimens <- nrow(specimen_means2 %>% filter(life_stage=="adult"))
+n_tad_specimens <- nrow(specimen_means2 %>% filter(life_stage=="tadpole"))
+n_family <- length(levels(specimen_means2$family))
+n_species <- length(levels(specimen_means2$genus_species))
+```
+
+Number of specimens sampled total: `r n_specimen`
+Number of adult specimens sampled: `r n_adult_specimens`
+Number of tadpole specimens sampled: `r n_tad_specimens`
+Number of families sampled `r n_family`
+Number of species sampled `r n_species`
+
 
 ## Mean lens shape by species and life stage
 
@@ -101,7 +123,6 @@ species_stage_means <- specimen_means%>%
 species_stage_means[species_stage_means$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 species_stage_means[species_stage_means$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 species_stage_means[species_stage_means$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
-
 ```
 
 The following creates a dataframe with **one row per species**
