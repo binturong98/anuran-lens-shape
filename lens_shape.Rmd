@@ -436,17 +436,87 @@ Correlation between all metrics. Flatness is excluded from further analyses to a
 
 ```{r correlation in lens metrics}
 
-pdf(file = "ShapeCorrelations_.pdf", width = 10,  height = 12)
-par(mfrow=c(3, 2))
-plot(species_stage_means$mean_flatness~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Anisotropy")
-legend("bottomleft", legend = c("adult", "tadpole"), col = c("cyan","black"), pch=1)
-plot(species_stage_means$mean_flatness~species_stage_means$mean_elongation, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Elongation")
-plot(species_stage_means$mean_flatness~species_stage_means$mean_sphericity, col=species_stage_means$life_stage, ylab= "Flatness", xlab= "Sphericity")
-plot(species_stage_means$mean_elongation~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Elongation", xlab= "Anisotropy")
-plot(species_stage_means$mean_elongation~species_stage_means$mean_sphericity, col=species_stage_means$life_stage, ylab= "Elongation", xlab= "Sphericity")
-plot(species_stage_means$mean_sphericity~species_stage_means$mean_anisotropy, col=species_stage_means$life_stage, ylab= "Sphericity", xlab= "Anisotropy")
-dev.off()
+#linear regressions and plots of pairs of shape metrics
 
+#flatness vs. anisotropy
+flat_anis <- ggplot(species_stage_means, aes(x = mean_anisotropy, y = mean_flatness, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Anisotropy", y="Flatness") +
+  theme(legend.position = "none")
+
+summary(lm(mean_flatness~mean_anisotropy, data = species_stage_means))
+
+
+#flatness vs. elongation 
+flat_elon <- ggplot(species_stage_means, aes(x = mean_elongation, y = mean_flatness, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Elongation", y="Flatness") +
+  theme(legend.position = "none")
+
+summary(lm(mean_flatness~mean_elongation, data = species_stage_means))
+
+
+#flatness vs. sphericity
+flat_sph <- ggplot(species_stage_means, aes(x = mean_sphericity, y = mean_flatness, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Sphericity", y="Flatness") +
+  theme(legend.position = "none")
+
+summary(lm(mean_flatness~mean_sphericity, data = species_stage_means))
+
+#elongation vs. anisotropy
+elong_anis <- ggplot(species_stage_means, aes(x = mean_anisotropy, y = mean_elongation, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Anisotropy", y="Elongation") +
+  theme(legend.position = "none")
+
+summary(lm(mean_elongation~mean_anisotropy, data = species_stage_means))
+
+
+#elongation vs. sphericity
+elong_sph <- ggplot(species_stage_means, aes(x = mean_sphericity, y = mean_elongation, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Sphericity", y="Elongation") +
+  theme(legend.position = "none")
+
+summary(lm(mean_elongation~mean_sphericity, data = species_stage_means))
+
+
+#sphericity vs. anisotropy
+sph_anis <- ggplot(species_stage_means, aes(x = mean_anisotropy, y = mean_sphericity, shape = life_stage)) +
+  scale_shape_manual(values=c(19,1), name = "Life stage") +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x="Anisotropy", y="Sphericity") +
+  theme(legend.position = "none")
+
+summary(lm(mean_sphericity~mean_anisotropy, data = species_stage_means))
+
+#construct supplemental figure
+plots <- plot_grid(flat_anis, flat_elon, flat_sph, elong_anis, elong_sph, sph_anis,
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("A","B","C","D","E","F"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 3) #number of rows in grids
+
+#print figure
+plots
+
+#export figure
+pdf(file = "Figures/Fig-supp_shape_correlations.pdf", width = 10,  height = 12)
+plots
+dev.off()
 ```
 
 ```{r snout-vent length and shape}
