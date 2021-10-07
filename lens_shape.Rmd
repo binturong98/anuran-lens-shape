@@ -101,7 +101,7 @@ The following creates a dataframe with **one row per life stage for a species**.
 
 species_stage_means <- specimen_means %>%
   filter(life_stage != "artificial") %>%
-  group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
+  group_by(genus_species, family, life_stage, adult_ecology, activity_period) %>%
   summarise(mean_flatness = mean(mean_flatness, na.rm = TRUE),
             mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
             mean_elongation = mean(mean_elongation, na.rm = TRUE),
@@ -120,18 +120,34 @@ The following creates a dataframe with **one row per species**
 ```{r species_means-wide}
 
 #make separate dataframes for adults and tadpoles
-tads_mean <- filter(species_stage_means, life_stage == "tadpole")
-adults_mean <- filter(species_stage_means, life_stage == "adult")
+tads_mean <- filter(species_stage_means, life_stage == "tadpole") %>% droplevels()
+adults_mean <- filter(species_stage_means, life_stage == "adult") %>% droplevels()
 
-#merge tadpole and adult dataframes by species 
+#merge tadpole and adult dataframes by species (all data)
 species_means <- full_join(tads_mean, adults_mean, 
                            by = "genus_species", 
                            suffix = c(".tads", ".adults"))
+
+#merge only matched tadpole and adult data within species
+species_matched <- inner_join(tads_mean, adults_mean,
+                              by = c("genus_species", "family"),
+                           suffix = c(".tads", ".adults")) %>% droplevels()
+
+#sampling for adults and tadpoles
+n_tadpole_species <- length(levels(tads_mean$genus_species))
+n_adult_species <- length(levels(adults_mean$genus_species))
+n_matched_species <- length(levels(species_matched$genus_species))
+n_matched_families <- length(levels(species_matched$family))
 ```
+
+Species sampling by life stage:
+Number of species with adult data: `r n_adult_species`
+Number of species with tadpole data: `r n_tadpole_species`
+Number of species with both tadpole and adult data (matched): `r n_matched_species`
 
 ## Species with eye size data
 
-This dataframe pulls out the specimens that we were able to get eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles.The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
+This dataframe pulls out the specimens that we were able to get 2D eye size measurements for in Avizo. These were mostly adults, but did include a few tadpoles. The mean eye measurements are calculated for each **specimen**. Then, since there were few tadpoles with data, the **adults** are subset out for further analyses. 
 
 ```{r subsets for eye data in anura only - activity and ecology}
 
