@@ -547,37 +547,11 @@ plot(mean_svl~adult_ecology, data = species_stage_means)
 
 # Data Analysis      
 
-## Q1 Tadpoles Vs Adults (no phylogenetic correction)
+## Q1 Lens shape of tadpoles vs. adults
 
-### t-tests (each metric in turn)
+Here, we examine whether tadpole lens shape differs from adult lens shape across all species sampled (118 species with adult data, 48 species with tadpole data). These models do not include phylogenetic corrections. 
 
-```{r independent t-test all tads and adults}
-
-# unequal variances therefore welch two sample t-test 
-
-t.test(mean_anisotropy~life_stage, data = species_stage_means)
-# p = 2.2e-16 ***
-
-t.test(mean_sphericity~life_stage, data = species_stage_means)
-# p = 1.885e-14 ***
-
-t.test(mean_elongation~life_stage, data = species_stage_means)
-# p = 0.6734
-
-```
-
-### Procrustes ANOVA for shape variables
-
-```{r procD all metrics}
-
-fit<-summary(procD.lm(species_stage_means[,12:14]~life_stage,iter = 999,seed = NULL,RRPP = TRUE, SS.type = NULL, int.first = FALSE, Cov = NULL, data = species_stage_means, print.progress = TRUE)) #no flatness
-fit
-
-```
-
-## Q2 Phylogenetic signal analyses
-
-### PCA
+### Principle component analysis
 
 ```{r PCA}
 
@@ -585,8 +559,8 @@ fit
 row.names(species_stage_means) <- paste(species_stage_means$life_stage, row.names(species_stage_means), sep="_") 
 species_stage_means$life_Stage <- NULL
 
-# running PCA on tadpoles and adults with flatness, anisotropy, elongation and sphericity values
-lens.pca <- prcomp(species_stage_means[,c(12:14)], center = TRUE, scale. = TRUE)
+# running PCA on tadpoles and adults with anisotropy, elongation and sphericity values
+lens.pca <- prcomp(species_stage_means[,c("mean_anisotropy","mean_elongation","mean_sphericity")], center = TRUE, scale. = TRUE)
 
 # summary stats
 summary(lens.pca)
@@ -601,23 +575,58 @@ lens.pca$rotation
 
 # plot directly
 plot(lens.pca$x[,1], lens.pca$x[,2])
+```
+
+
+### t-tests 
+
+Here, we use Welch's two-sample t tests to test whether tadpoles and adults exhibit different lens shapes for each of the three shape metrics examined (anisotropy, sphericity, and elongation).
+
+```{r independent t-test all tads and adults}
+
+# unequal variances therefore welch two sample t-test 
+
+#anisotropy
+t.test(mean_anisotropy~life_stage, data = species_stage_means)
+
+#sphericity
+t.test(mean_sphericity~life_stage, data = species_stage_means)
+
+#elongation
+t.test(mean_elongation~life_stage, data = species_stage_means)
+```
+
+### Procrustes MANOVA for shape variables
+
+Here, we use a multivariate approach to test whether the three shape metrics together (sphericity, anisotropy, elongation) are associated with life stage (tadpole vs. adult)
+
+```{r procD all metrics}
+
+fit <- summary(procD.lm(species_stage_means[,c("mean_anisotropy","mean_elongation","mean_sphericity")]~life_stage,iter = 999,seed = NULL,RRPP = TRUE, SS.type = NULL, int.first = FALSE, Cov = NULL, data = species_stage_means, print.progress = TRUE)) 
+
+fit
 
 ```
 
+## Q2 Differences in lens shape through ontogeny within species
+
+Here, we examine a subset of species (n = 44) that have matched tadpole and adult lens shape data to see how lens shape changes through ontogeny and whether this is driven by differences in adult habitat. 
+
+### Phylogenetic signal
+
+Here, we estimated phylogenetic signal in tadpole lens shape, in adult lens shape, and in the change in lens shape through ontogeny (difference between adults and tadpoles within species). For these analyses, lens shape was represented by the PCA scores from the above analysis, which allowed us to use a multivariate approach. 
+
 ```{r phylogenetic signal}
 
+#Prepare data -----
+
 # PCA with all data tadpole Xs and adults Os
-pca_data<- cbind(as.data.frame(species_stage_means), as.data.frame(lens.pca$x))
+pca_data <- cbind(as.data.frame(species_stage_means), as.data.frame(lens.pca$x))
 
 pca_means <- pca_data %>%
   #mutate_if(is.character, as.factor) %>% 
-  group_by(genus_species, life_stage, adult_ecology, adult_ecology_2, activity_period) %>%
-  summarise(mean_volume = mean(mean_volume, na.rm = TRUE),
-            mean_area = mean(mean_area, na.rm = TRUE),
-            mean_breadth = mean(mean_breadth, na.rm = TRUE),
-            mean_length = mean(mean_length, na.rm = TRUE),
-            mean_width = mean(mean_width, na.rm = TRUE),
-            mean_flatness = mean(mean_flatness, na.rm = TRUE),
+  group_by(genus_species, life_stage, adult_ecology, activity_period) %>%
+  summarise(mean_flatness = mean(mean_flatness, na.rm = TRUE),
             mean_anisotropy = mean(mean_anisotropy, na.rm = TRUE),
             mean_elongation = mean(mean_elongation, na.rm = TRUE),
             mean_sphericity = mean(mean_sphericity, na.rm = TRUE),
@@ -627,7 +636,6 @@ pca_means <- pca_data %>%
             mean_PC2 = mean(PC2, na.rm = TRUE),
             mean_PC3 = mean(PC3, na.rm = TRUE)) %>%
   ungroup() 
-
 
 #make separate dataframes for adults and tadpoles
 phylo_tads <- filter(pca_means, life_stage == "tadpole")
@@ -641,7 +649,7 @@ phylo_pca_means <- full_join(phylo_tads, phylo_adults,
 #capitalize genus 
 str_sub(phylo_pca_means$genus_species, 1, 1) <- str_sub(phylo_pca_means$genus_species, 1, 1) %>% str_to_upper()
 
-#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+#add synonym and substitutions for phylogeny into dataframe
 phylo_pca_means[phylo_pca_means$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 phylo_pca_means[phylo_pca_means$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 phylo_pca_means[phylo_pca_means$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
@@ -649,6 +657,7 @@ phylo_pca_means[phylo_pca_means$genus_species=="Rhombophryne_nilevina", "genus_s
 #make a dataframe for matching with phylogeny 
 phylo_pca_means<-as.data.frame(phylo_pca_means)
 
+#Prepare trees -----
 
 #trim tree to data
 rownames(phylo_pca_means)<-phylo_pca_means$genus_species;
@@ -708,19 +717,22 @@ both_phylo_means[] <- lapply(both_phylo_means, function(x) if(is.factor(x)) fact
 rownames(both_phylo_means)<-both_phylo_means$genus_species;
 both_phylo_means <-  both_phylo_means[tree.both$tip.label, ]
 
+# Tests for phylogenetic signal ------
 
-######## phylogenetic signal of tad shape 
-physignal(as.matrix(tad_phylo_means[,c(12:14)]), tree.tad,iter = 999, seed = NULL)
+#phylogenetic signal of tadpole lens shape (all species of tads, n=48)
+physignal(as.matrix(tad_phylo_means[,c(c("mean_anisotropy.tads","mean_elongation.tads","mean_sphericity.tads"))]), tree.tad,iter = 999, seed = NULL)
 
-######## phylogenetic signal of adult lens shape.final
-physignal(as.matrix(adult_phylo_means[,c(30:32)]), tree.adult, iter = 999, seed = NULL)
+#phylogenetic signal of adult lens shape (all species of adults, n=118)
+physignal(as.matrix(adult_phylo_means[,c("mean_anisotropy.adults","mean_elongation.adults","mean_sphericity.adults")]), tree.adult, iter = 999, seed = NULL)
 
-######## pylogenetic signal of the difference between tad and adult lens shape 
-physignal(as.matrix(both_phylo_means[,c(39:41)]), tree.both, iter = 999, seed = NULL)
+#phylogenetic signal of the difference between tad and adult lens shape (n=44 species)
+physignal(as.matrix(both_phylo_means[,c("mean_anisotropy.diff","mean_elongation.diff","mean_sphericity.diff")]), tree.both, iter = 999, seed = NULL)
 
-# check phy signal for tads and adults using subsetted data that has both
-physignal(as.matrix(both_phylo_means[,c(12:14)]), tree.both, iter = 999, seed = NULL)
-physignal(as.matrix(both_phylo_means[,c(30:32)]), tree.both, iter = 999, seed = NULL)
+#check phy signal for tadpoles in matched species only (n=44 species)
+physignal(as.matrix(both_phylo_means[,c("mean_anisotropy.tads","mean_elongation.tads","mean_sphericity.tads")]), tree.both, iter = 999, seed = NULL)
+
+#check phy signal for adults in matched species only (n=44 species)
+physignal(as.matrix(both_phylo_means[,c("mean_anisotropy.adults","mean_elongation.adults","mean_sphericity.adults")]), tree.both, iter = 999, seed = NULL)
 
 ```
 
