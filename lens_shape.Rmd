@@ -751,7 +751,7 @@ both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] #Align data and phy
 geocapertree <- makeNodeLabel(tree.both, method = "number", prefix = "Node")
 geocaperdata <- comparative.data(phy=geocapertree, data=both_phylo_means, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
 
-#pgls for anisotropy--
+#pgls for anisotropy----
 
 #fit model
 aniso.pgls<-pgls(mean_anisotropy.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
@@ -768,7 +768,7 @@ anova(aniso.pgls)
 #view coefficients
 summary(aniso.pgls)
 
-#pgls for elongation---
+#pgls for elongation----
 
 #fit model
 elong.pgls<-pgls(mean_elongation.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
@@ -829,12 +829,175 @@ Here, we examine whether adult lens size (relative to eye size) or shape are cor
 
 ### PGLS: Adult lens shape vs. ecology for each 3D shape metric
 
-Here, we run a series of PGLS regressions to test for associations betweeen each 3D shape metric (anisotropy, elongation, and sphericity) and adult ecology (habitat and activity period). 
+Here, we run a series of PGLS regressions to test for associations between each 3D shape metric (anisotropy, elongation, and sphericity) and adult ecology (habitat and activity period). 
+
+#### Habitat
 
 ```{r}
+#pgls regressions testing for effect of adult habitat on each 3D shape metric (separately)
 
+#prep data and tree----
+
+#subset adults with habitat data
+adult_phylo_eco<-filter(adult_phylo_means, adult_ecology.adults != "unknown")
+table(adult_phylo_eco$adult_ecology.adults)
+
+#trim tree to adults with habitat data
+rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
+name.check(tree_orig,adult_phylo_eco)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.eco;
+#plot(tree.adult.eco)
+
+#Remove excess data from species not found in tree
+adult_phylo_eco<-adult_phylo_eco[ ! adult_phylo_eco$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_eco[] <- lapply(adult_phylo_eco, function(x) if(is.factor(x)) factor(x) else x)
+adult_phylo_eco <-  adult_phylo_eco[tree.adult.eco$tip.label, ]
+
+#make comparative object
+adult.eco.comp <- comparative.data(phy=tree.adult.eco, data=adult_phylo_eco, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#pgls for anisotropy----
+
+#fit model
+eco.aniso.pgls <- pgls(mean_anisotropy.adults ~ adult_ecology.adults,
+                       data = adult.eco.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(eco.aniso.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(eco.aniso.pgls)
+
+#view coefficients
+summary(eco.aniso.pgls)
+
+#pgls for sphericity----
+
+#fit model
+eco.sph.pgls <- pgls(mean_sphericity.adults ~ adult_ecology.adults,
+                       data = adult.eco.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(eco.sph.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(eco.sph.pgls)
+
+#view coefficients
+summary(eco.sph.pgls)
+
+#pgls for elongation----
+
+#fit model
+eco.elong.pgls <- pgls(mean_elongation.adults ~ adult_ecology.adults,
+                       data = adult.eco.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(eco.elong.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(eco.elong.pgls)
+
+#view coefficients
+summary(eco.elong.pgls)
 ```
 
+#### Activity period
+
+```{r}
+#pgls regressions testing for effect of adult activity period on each 3D shape metric (separately)
+
+#prep data and tree----
+
+#subset adults with activity period data
+adult_phylo_activ<-filter(adult_phylo_means, activity_period.adults != "unknown")
+table(adult_phylo_activ$activity_period.adults)
+
+#trim tree to adults with activity period data
+rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
+name.check(tree_orig,adult_phylo_activ)->overlap
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.activ;
+#plot(tree.adult.activ)
+
+#Remove excess data from species not found in tree
+adult_phylo_activ<-adult_phylo_activ[ ! adult_phylo_activ$genus_species %in% overlap$data_not_tree, ]
+adult_phylo_activ[] <- lapply(adult_phylo_activ, function(x) if(is.factor(x)) factor(x) else x)
+adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
+
+#make comparative object
+adult.act.comp <- comparative.data(phy=tree.adult.activ, data=adult_phylo_activ, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#pgls for anisotropy----
+
+#fit model
+act.aniso.pgls <- pgls(mean_anisotropy.adults ~ activity_period.adults,
+                       data = adult.act.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(act.aniso.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(act.aniso.pgls)
+
+#view coefficients
+summary(act.aniso.pgls)
+
+#pgls for sphericity----
+
+#fit model
+act.sph.pgls <- pgls(mean_sphericity.adults ~ activity_period.adults,
+                       data = adult.act.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(act.sph.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(act.sph.pgls)
+
+#view coefficients
+summary(act.sph.pgls)
+
+#pgls for elongation----
+
+#fit model
+act.elong.pgls <- pgls(mean_elongation.adults ~ activity_period.adults,
+                       data = adult.act.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(act.elong.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(act.elong.pgls)
+
+#view coefficients
+summary(act.elong.pgls)
+```
 
 ### Procrustes MANOVA: Adult lens shape vs. ecology
 
@@ -856,47 +1019,16 @@ summary(procD)
 #### Adult habitat
 
 ```{r}
-#subset adults with habitat data
-adult_phylo_eco<-filter(adult_phylo_means, adult_ecology.adults != "unknown")
-table(adult_phylo_eco$adult_ecology.adults)
-
-#trim tree to adults with habitat data
-rownames(adult_phylo_eco)<-adult_phylo_eco$genus_species;
-name.check(tree_orig,adult_phylo_eco)->overlap
-#overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.eco;
-#plot(tree.adult.eco)
-
-#Remove excess data from species not found in tree
-adult_phylo_eco<-adult_phylo_eco[ ! adult_phylo_eco$genus_species %in% overlap$data_not_tree, ]
-adult_phylo_eco[] <- lapply(adult_phylo_eco, function(x) if(is.factor(x)) factor(x) else x)
-adult_phylo_eco <-  adult_phylo_eco[tree.adult.eco$tip.label, ]
 
 #procD.pgls of adult lens shape (all 3 measures) by habitat
 procD<-procD.pgls(adult_phylo_eco[,c("mean_anisotropy.adults","mean_elongation.adults","mean_sphericity.adults")]~adult_ecology.adults, tree.adult.eco, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_phylo_eco, print.progress = TRUE)
 
 summary(procD)
 ```
+
 #### Activity period
 
 ```{r}
-
-#subset adults with activity period data
-adult_phylo_activ<-filter(adult_phylo_means, activity_period.adults != "unknown")
-table(adult_phylo_activ$activity_period.adults)
-
-#trim tree to adults with activity period data
-rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
-name.check(tree_orig,adult_phylo_activ)->overlap
-#overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree.adult.activ;
-#plot(tree.adult.activ)
-
-#Remove excess data from species not found in tree
-adult_phylo_activ<-adult_phylo_activ[ ! adult_phylo_activ$genus_species %in% overlap$data_not_tree, ]
-adult_phylo_activ[] <- lapply(adult_phylo_activ, function(x) if(is.factor(x)) factor(x) else x)
-adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
-
 #procD.pgls of adult eye shape (all 3 measures) by activity period
 procD<-procD.pgls(adult_phylo_activ[,c("mean_anisotropy.adults","mean_elongation.adults","mean_sphericity.adults")]~activity_period.adults, tree.adult.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_phylo_activ, print.progress = TRUE)
 
