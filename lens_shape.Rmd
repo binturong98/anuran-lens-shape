@@ -519,28 +519,27 @@ plots
 dev.off()
 ```
 
+## Tests for correlation between lens shape and body size
+
+We checked that among adults that we had body size (snout-vent length) data for, there was no correlation between body size and any of the 3D shape metrics, as this could influence our models and interpretations. 
+
+
 ```{r snout-vent length and shape}
 
-par(mfrow=c(2, 2))
-lm(mean_sphericity~mean_svl, data = species_stage_means)
-lm(mean_anisotropy~mean_svl, data = species_stage_means)
-lm(mean_flatness~mean_svl, data = species_stage_means)
-lm(mean_elongation~mean_svl, data = species_stage_means)
+#regressions of lens shape vs. SVL 
+summary(lm(mean_sphericity~mean_svl, data = species_stage_means))
+summary(lm(mean_anisotropy~mean_svl, data = species_stage_means))
+summary(lm(mean_flatness~mean_svl, data = species_stage_means))
+summary(lm(mean_elongation~mean_svl, data = species_stage_means))
 
-par(mfrow=c(2, 2))
-plot(mean_sphericity~mean_svl, data = species_stage_means)
-plot(mean_anisotropy~mean_svl, data = species_stage_means)
-plot(mean_flatness~mean_svl, data = species_stage_means)
-plot(mean_elongation~mean_svl, data = species_stage_means)
-
-pdf(file = "LensShapes_BySVL_.pdf", width = 9,  height = 7)
+#plots of lens shape by body size
 par(mfrow=c(2, 2))
 plot(mean_sphericity~mean_svl, data = species_stage_means)
 plot(mean_anisotropy~mean_svl, data = species_stage_means)
 plot(mean_flatness~mean_svl, data = species_stage_means)
 plot(mean_elongation~mean_svl, data = species_stage_means)
-dev.off()
 
+#plot of mean body size across adult habitats
 par(mfrow=c(1, 1))
 plot(mean_svl~adult_ecology, data = species_stage_means)
 
