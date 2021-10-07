@@ -31,7 +31,7 @@ library(RRPP)
 library(viridis)
 library(pca3d)
 library(gridExtra)
-
+library(caper)
 ```
 
 # Data and subsetting
@@ -736,15 +736,84 @@ physignal(as.matrix(both_phylo_means[,c("mean_anisotropy.adults","mean_elongatio
 
 ```
 
-## Q3 Difference between tadpole and adult lens shape by ecology (phylogenetic correction)
+### Difference between tadpole and adult lens shape vs ecology
 
-```{r Procrustes ANOVA and PGLS}
+Here, we examine whether the change in lens shape through ontogeny (difference between tadpole and adult lens shape within species) is correlated with adult habitat. We do this first by examining each 3D lens metric individually, and then with a multivariate approach. 
+
+#### PGLS 
+
+```{r}
+
+#pgls regressions testing for effect of adult habitat on each 3D shape metric (separately) f
+
+#prep data/tree
+both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] #Align data and phylogeny labels
+geocapertree <- makeNodeLabel(tree.both, method = "number", prefix = "Node")
+geocaperdata <- comparative.data(phy=geocapertree, data=both_phylo_means, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#pgls for anisotropy--
+
+#fit model
+aniso.pgls<-pgls(mean_anisotropy.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(aniso.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(aniso.pgls)
+
+#view coefficients
+summary(aniso.pgls)
+
+#pgls for elongation---
+
+#fit model
+elong.pgls<-pgls(mean_elongation.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(elong.pgls)
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(elong.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(elong.pgls)
+
+#view coefficients
+summary(elong.pgls)
+
+#pgls for sphericity----
+
+#fit model
+sphere.pgls<-pgls(mean_sphericity.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+summary(sphere.pgls)
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(sphere.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(sphere.pgls)
+
+#view coefficients
+summary(sphere.pgls)
+```
+
+#### Procrustes MANOVA
+
+```{r}
 
 #check adequate levels for testing
 table(both_phylo_means$adult_ecology.adults)
 
 #procD.pgls of lens shape differences in all 3 measures 
-procD<-procD.pgls(both_phylo_means[,c(39,41)]~adult_ecology.adults, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
+procD<-procD.pgls(both_phylo_means[,c("mean_anisotropy.diff","mean_elongation.diff","mean_sphericity.diff")]~adult_ecology.adults, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
 summary(procD)
 
 
@@ -752,28 +821,18 @@ summary(procD)
 PairEcoTest<-pairwise(procD, fit.null = NULL, both_phylo_means$adult_ecology.adults, covariate = NULL, print.progress = FALSE)
 summary(PairEcoTest)
 
-#pgls for difference for each shape measure in turn
-library(caper)
-both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] #Align data and phylogeny labels
-geocapertree <- makeNodeLabel(tree.both, method = "number", prefix = "Node")
-geocaperdata <- comparative.data(phy=geocapertree, data=both_phylo_means, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
-
-
-aniso.pgls<-pgls(mean_anisotropy.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
-summary(aniso.pgls)
-
-flat.pgls<-pgls(mean_flatness.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
-summary(flat.pgls)
-
-elong.pgls<-pgls(mean_elongation.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
-summary(elong.pgls)
-
-sphere.pgls<-pgls(mean_sphericity.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
-summary(sphere.pgls)
-
 ```
 
-## Q4 Tadpole and adult lens shape by ecology (phylogenetic correction)
+
+
+
+
+
+
+
+## Q3 Adult lens shape and size vs ecology
+
+Here, we examine whether adult lens size or shape are correlated with adult ecology (habitat or activity period). 
 
 ```{r PGLS tadpole lens shape by ecology}
 
