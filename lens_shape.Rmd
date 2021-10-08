@@ -68,6 +68,10 @@ specimen_means <- lens_data %>%
             mean_svl = mean(sv_length_mm, na.rm = TRUE),
             n = n()) %>%
   ungroup() 
+
+#convert NaN values to NA 
+specimen_means[specimen_means == "NaN"] <- NA
+
 ```
 
 Here, we report summary data on specimen sampling (after removing the 4 artificial reference objects created in Blender). Note that the specimen ID "MS2_top" refers to both a tadpole and an adult specimen, and is a duplicated element (thus there is one less factor level for specimen ID than there are actual unique specimens).
@@ -151,6 +155,7 @@ This dataframe pulls out the specimens that we were able to get 2D eye size meas
 
 ```{r subsets for eye data in anura only - activity and ecology}
 
+
 #create dataframe for specimens with eye size data
 eye_mean <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
@@ -167,60 +172,21 @@ eye_mean <- lens_data %>%
 #convert NaN values to NA 
 eye_mean[eye_mean == "NaN"] <- NA
 
+#get rid of rows with missing eye diameter or lens diameter data
+eye_data <- eye_mean %>%
+  filter(!(is.na(mean.eye.diameter)&is.na(mean.lens.diameter)))
+
 # subsetting for adults 
-adult_eye <- eye_mean %>%
-  filter(life_stage != "artificial" & life_stage != "tadpole") %>%
-  mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter) %>%
-  filter(lens_relative_to_eye > 0)
+adult_eye <- eye_data %>%
+  filter(life_stage =="adult")
 
 #capitalize genus 
 str_sub(adult_eye$genus_species, 1, 1) <- str_sub(adult_eye$genus_species, 1, 1) %>% str_to_upper()
 
-#add synonym and substitutions for phylogeny into dataframe (lens_species column)
+#add synonym and substitutions for phylogeny into dataframe
 adult_eye[adult_eye$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 adult_eye[adult_eye$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 adult_eye[adult_eye$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
-
-
-# Make tree-trimmed dataset for ecology analysis of lens size 
-table(adult_eye$adult_ecology)
-adult_eye_eco<-filter(adult_eye, adult_ecology != "unknown")
-adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
-
-adult_eye_eco<-as.data.frame(adult_eye_eco)
-
-#trim tree to adult data
-rownames(adult_eye_eco)<-adult_eye_eco$genus_species;
-name.check(tree_orig,adult_eye_eco)->overlap
-
-#overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree_adult_eye_eco;
-plot(tree_adult_eye_eco)
-
-#Remove excess data from species not found in tree
-adult_eye_eco<-adult_eye_eco[ ! adult_eye_eco$genus_species %in% overlap$data_not_tree, ]
-adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
-adult_eye_eco <-  adult_eye_eco[tree_adult_eye_eco$tip.label, ]
-
-# Make tree-trimmed dataset for activity analysis of lens size 
-adult_eye_activ<-filter(adult_eye, activity_period != "unknown")
-adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
-table(adult_eye_activ$activity_period)
-adult_eye_activ<-as.data.frame(adult_eye_activ)
-
-#trim tree to adult data
-rownames(adult_eye_activ)<-adult_eye_activ$genus_species;
-name.check(tree_orig,adult_eye_activ)->overlap
-
-#overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree.eye.activ;
-plot(tree.eye.activ)
-
-#Remove excess data from species not found in tree
-adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$data_not_tree, ]
-adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
-adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
-
 ```
 
 # Data checks
@@ -1040,6 +1006,50 @@ summary(procD)
 
 
 ### PGLS: Adult lens size vs. eye size + ecology
+
+
+```{r}
+# Make tree-trimmed dataset for ecology analysis of lens size 
+table(adult_eye$adult_ecology)
+adult_eye_eco<-filter(adult_eye, adult_ecology != "unknown")
+adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
+
+adult_eye_eco<-as.data.frame(adult_eye_eco)
+
+#trim tree to adult data
+rownames(adult_eye_eco)<-adult_eye_eco$genus_species;
+name.check(tree_orig,adult_eye_eco)->overlap
+
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree_adult_eye_eco;
+plot(tree_adult_eye_eco)
+
+#Remove excess data from species not found in tree
+adult_eye_eco<-adult_eye_eco[ ! adult_eye_eco$genus_species %in% overlap$data_not_tree, ]
+adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
+adult_eye_eco <-  adult_eye_eco[tree_adult_eye_eco$tip.label, ]
+
+# Make tree-trimmed dataset for activity analysis of lens size 
+adult_eye_activ<-filter(adult_eye, activity_period != "unknown")
+adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
+table(adult_eye_activ$activity_period)
+adult_eye_activ<-as.data.frame(adult_eye_activ)
+
+#trim tree to adult data
+rownames(adult_eye_activ)<-adult_eye_activ$genus_species;
+name.check(tree_orig,adult_eye_activ)->overlap
+
+#overlap
+drop.tip(tree_orig,overlap$tree_not_data)->tree.eye.activ;
+plot(tree.eye.activ)
+
+#Remove excess data from species not found in tree
+adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$data_not_tree, ]
+adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
+adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
+
+```
+
 
 ```{r adult lens size by eco while accounting for eye size}
 
