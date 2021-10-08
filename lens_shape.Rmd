@@ -155,8 +155,7 @@ This dataframe pulls out the specimens that we were able to get 2D eye size meas
 
 ```{r subsets for eye data in anura only - activity and ecology}
 
-
-#create dataframe for specimens with eye size data
+#create dataframe for eye subset
 eye_mean <- lens_data %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
   mutate_if(is.character, as.factor) %>% 
@@ -172,22 +171,23 @@ eye_mean <- lens_data %>%
 #convert NaN values to NA 
 eye_mean[eye_mean == "NaN"] <- NA
 
-#get rid of rows with missing eye diameter or lens diameter data
-eye_data <- eye_mean %>%
-  filter(!(is.na(mean.eye.diameter)&is.na(mean.lens.diameter)))
-
 # subsetting for adults 
-adult_eye <- eye_data %>%
-  filter(life_stage =="adult")
+adult_eye <- eye_mean %>%
+  filter(life_stage != "artificial" & life_stage != "outgroup" & life_stage != "tadpole") %>%
+  mutate(lens_relative_to_eye = mean.lens.diameter/mean.eye.diameter) %>%
+  filter(lens_relative_to_eye > 0)
 
 #capitalize genus 
 str_sub(adult_eye$genus_species, 1, 1) <- str_sub(adult_eye$genus_species, 1, 1) %>% str_to_upper()
 
-#add synonym and substitutions for phylogeny into dataframe
+#add synonym and substitutions for phylogeny into dataframe (lens_species column)
 adult_eye[adult_eye$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 adult_eye[adult_eye$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 adult_eye[adult_eye$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
 ```
+
+Species with 2D adult eye & lens size data:  `r nrow(adult_eye)`
+
 
 # Data checks
 
@@ -1002,18 +1002,22 @@ summary(procD)
 
 ```
 
-
-
-
 ### PGLS: Adult lens size vs. eye size + ecology
 
+Here, we test whether lens size (relative to eye size) varies across habitats or activity periods among adult anurans (n=81 species) using PGLS regressions in geomorph.  
+
+#### Habitat
 
 ```{r}
-# Make tree-trimmed dataset for ecology analysis of lens size 
-table(adult_eye$adult_ecology)
-adult_eye_eco<-filter(adult_eye, adult_ecology != "unknown")
-adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
 
+# Prep data and tree-----
+
+#view distribution of data
+table(adult_eye$adult_ecology)
+
+# Make tree-trimmed dataset for habitat analysis of lens size 
+adult_eye_eco <- filter(adult_eye, adult_ecology != "unknown") %>% droplevels()
+adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_eco<-as.data.frame(adult_eye_eco)
 
 #trim tree to adult data
@@ -1021,15 +1025,36 @@ rownames(adult_eye_eco)<-adult_eye_eco$genus_species;
 name.check(tree_orig,adult_eye_eco)->overlap
 
 #overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree_adult_eye_eco;
-plot(tree_adult_eye_eco)
+drop.tip(tree_orig, overlap$tree_not_data) -> tree_adult_eye_eco
+#plot(tree_adult_eye_eco)
 
 #Remove excess data from species not found in tree
 adult_eye_eco<-adult_eye_eco[ ! adult_eye_eco$genus_species %in% overlap$data_not_tree, ]
 adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_eco <-  adult_eye_eco[tree_adult_eye_eco$tip.label, ]
 
-# Make tree-trimmed dataset for activity analysis of lens size 
+#run PGLS-----
+
+#PGLS of lens size ~ eye size  + habitat
+hab_eye_procD <- procD.pgls(mean.lens.diameter ~ mean.eye.diameter + adult_ecology, tree_adult_eye_eco, Cov = NULL, iter = 999, seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_eco, print.progress = TRUE)
+
+#model summary
+summary(hab_eye_procD)
+
+#pairwise comparisons
+PairHabTest<-pairwise(hab_eye_procD, fit.null = NULL, adult_eye_eco$adult_ecology, covariate = NULL, print.progress = FALSE)
+summary(PairHabTest)
+
+```
+#### Activity period
+
+```{r}
+# Prep data and tree-----
+
+#view distribution of data
+table(adult_eye$activity_period)
+
+#Make tree-trimmed dataset for activity analysis of lens size 
 adult_eye_activ<-filter(adult_eye, activity_period != "unknown")
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 table(adult_eye_activ$activity_period)
@@ -1041,36 +1066,24 @@ name.check(tree_orig,adult_eye_activ)->overlap
 
 #overlap
 drop.tip(tree_orig,overlap$tree_not_data)->tree.eye.activ;
-plot(tree.eye.activ)
+#plot(tree.eye.activ)
 
 #Remove excess data from species not found in tree
 adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$data_not_tree, ]
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
 
-```
+#run PGLS-----
 
+#PGLS of lens size ~  eye size + activity period
+act_eye_procD <- procD.pgls(mean.lens.diameter~mean.eye.diameter + activity_period, tree.eye.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_activ, print.progress = TRUE)
 
-```{r adult lens size by eco while accounting for eye size}
-
-table(adult_eye_eco$adult_ecology)
-
-#PGLS of lens size relative to eye_eco size ecology ~ activity (adult only)
-procD<-procD.pgls(mean.lens.diameter~mean.eye.diameter + adult_ecology, tree_adult_eye_eco, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_eco, print.progress = TRUE)
-summary(procD)
-
-#pairwise comparisons
-PairActivTest<-pairwise(procD, fit.null = NULL, adult_eye_eco$adult_ecology, covariate = NULL, print.progress = FALSE)
-summary(PairActivTest)
-
-#PGLS of lens size relative to eye size ~ activity (adult only)
-procD<-procD.pgls(mean.lens.diameter~mean.eye.diameter + activity_period, tree.eye.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_activ, print.progress = TRUE)
-summary(procD)
+#model summary
+summary(act_eye_procD)
   
 #pairwise comparisons
-PairActivTest<-pairwise(procD, fit.null = NULL, adult_eye_activ$activity_period, covariate = NULL, print.progress = FALSE)
+PairActivTest<-pairwise(act_eye_procD, fit.null = NULL, adult_eye_activ$activity_period, covariate = NULL, print.progress = FALSE)
 summary(PairActivTest)
-
 ```
 
 # Figures
