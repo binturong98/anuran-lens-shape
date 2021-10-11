@@ -1536,44 +1536,49 @@ ggplot(matchData, aes(x = stage, y = anisotropy, col = eco)) +
   labs(x = "Life stage", y = "Anisotropy") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none")
   
-  
 #plot matched data separated by adult habitats
 
 #anisotropy
-an.paired.plot <- ggplot(matchData, aes(x = stage, y = anisotropy, col = eco)) +
-  scale_color_manual(values = col_hab, name = "Adult habitat") +
+an.paired.plot <- ggplot(matchData, aes(x = stage, y = anisotropy, fill = eco)) +
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
   scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = eco), alpha = 1) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
-  geom_line(aes(group = species, col = eco), alpha = 0.5) +
-  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
   labs(x = "Life stage", y = "Anisotropy") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
   facet_wrap(~eco)
   
 #sphericity
-sp.paired.plot <- ggplot(matchData, aes(x = stage, y = sphericity, col = eco)) +
-  scale_color_manual(values = col_hab, name = "Adult habitat") +
+sp.paired.plot <- ggplot(matchData, aes(x = stage, y = sphericity, fill = eco)) +
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
   scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = eco), alpha = 1) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
-  geom_line(aes(group = species, col = eco), alpha = 0.5) +
-  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
   labs(x = "Life stage", y = "Sphericity") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
   facet_wrap(~eco)
 
 #elongation
-el.paired.plot <- ggplot(matchData, aes(x = stage, y = elongation, col = eco)) +
-  scale_color_manual(values = col_hab, name = "Adult habitat") +
+el.paired.plot <- ggplot(matchData, aes(x = stage, y = elongation, fill = eco)) +
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
   scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = eco), alpha = 1) +
+  scale_color_manual(values = col_hab, name = "Adult habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
-  geom_line(aes(group = species, col = eco), alpha = 0.5) +
-  geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) +
   labs(x = "Life stage", y = "Elongation") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
   facet_wrap(~eco)
+
+
+
 
 # Construct main figure -------
 
