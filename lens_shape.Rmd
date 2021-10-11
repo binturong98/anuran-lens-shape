@@ -1659,7 +1659,7 @@ rownames(adult_phylo_activ)<-adult_phylo_activ$genus_species;
 adult_phylo_activ <-  adult_phylo_activ[tree.adult.activ$tip.label, ]
 
 #### Habitat ####
-eco.pca <- prcomp(adult_phylo_eco[,12:14], center = TRUE, scale. = TRUE)
+eco.pca <- prcomp(adult_phylo_eco[,c("mean_anisotropy","mean_elongation","mean_sphericity")], center = TRUE, scale. = TRUE)
 
 Eco <- adult_phylo_eco$adult_ecology
 names(Eco)<-row.names(adult_phylo_eco)
@@ -1672,7 +1672,7 @@ ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids 
 legend("bottomright", ecoPlot$groups, col=ecoPlot$colors, pch=ecoPlot$pch, box.lty=0)
 
 #### Activity Pattern ####
-activ.pca <- prcomp(adult_phylo_activ[,12:14], center = TRUE, scale. = TRUE)
+activ.pca <- prcomp(adult_phylo_activ[,c("mean_anisotropy","mean_elongation","mean_sphericity")], center = TRUE, scale. = TRUE)
 
 activ <- adult_phylo_activ$activity_period
 names(activ)<-row.names(adult_phylo_activ)
@@ -1817,13 +1817,28 @@ dev.off()
 
 #### Habitat ####
 
-LensSize_eco<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_eco) 
-LensSize_eco<-as.data.frame(LensSize_eco$residuals)
-names(LensSize_eco)[1] <- "residuals"
-LensSize_eco$adult_ecology<-adult_eye_eco$adult_ecology
+# pgls in caper of lens ~ eye for plotting residuals---
+
+#make comparative object
+hab.eye.comp <- comparative.data(phy=tree_adult_eye_eco, data=adult_eye_eco, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#fit pgls model for lens vs. eye size
+hab.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
+                       data = hab.eye.comp, 
+                       lambda="ML")
 
 
-gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecology)) + 
+#extract pgls residuals 
+pglsres.habeye <- residuals(hab.eye.pgls) 
+
+#name residuals
+colnames(pglsres.habeye) <- "pglsres.habeye" 
+
+#merge residuals with original data by rowname
+adult_eye_eco2 <- merge(adult_eye_eco, pglsres.habeye, by = "row.names")
+
+#plot with caper pgls residuals
+gg_eco<-ggplot(adult_eye_eco, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_ecology)) + 
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Residual Lens Size")+
@@ -1831,22 +1846,31 @@ gg_eco<-ggplot(LensSize_eco, aes(x=adult_ecology, y=residuals, fill=adult_ecolog
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic()
 
-gg_eco 
 
 #### Activity Pattern ####
 
-Lens.Eye_activ_residuals<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_activ) 
-Lens.Eye_activ_residuals$activity_period<-adult_eye_activ$activity_period
+# pgls in caper of lens ~ eye for plotting residuals---
 
-LensSize_activ<-lm(mean.lens.diameter~mean.eye.diameter, data = adult_eye_activ) 
-LensSize_activ<-as.data.frame(LensSize_activ$residuals)
-names(LensSize_activ)[1] <- "residuals"
-LensSize_activ$activity_period<-adult_eye_activ$activity_period
+#make comparative object
+act.eye.comp <- comparative.data(phy=tree.eye.activ, data=adult_eye_activ, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
 
-LensSize_activ$activity_period <- factor(LensSize_activ$activity_period, levels = c("diurnal","cathemeral","nocturnal"))
-LensSize_activ$activity_period <- recode(LensSize_activ$activity_period, "cathemeral" = "both")
+#fit pgls model for lens vs. eye size
+act.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
+                       data = act.eye.comp, 
+                       lambda="ML")
 
-gg_activ<-ggplot(LensSize_activ, aes(x=activity_period, y=residuals, fill=activity_period)) + 
+#extract pgls residuals 
+pglsres.acteye <- residuals(act.eye.pgls) 
+
+#name residuals
+colnames(pglsres.acteye) <- "pglsres.acteye" 
+
+#merge residuals with original data by rowname
+adult_eye_activ2 <- merge(adult_eye_activ, pglsres.acteye, by = "row.names") %>%
+  mutate(activity_period = recode(activity_period, "cathemeral" = "both"))
+
+#make plot of caper pgls resudals across activity periods
+gg_activ<-ggplot(adult_eye_activ2, aes(x=activity_period, y=pglsres.acteye, fill=activity_period)) + 
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Residual Lens Size")+
