@@ -1033,7 +1033,32 @@ adult_eye_eco<-adult_eye_eco[ ! adult_eye_eco$genus_species %in% overlap$data_no
 adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_eco <-  adult_eye_eco[tree_adult_eye_eco$tip.label, ]
 
-#run PGLS-----
+#run PGLS using caper-----
+
+# pgls in caper of lens ~ eye for plotting residuals---
+
+#make comparative object
+hab.eye.comp <- comparative.data(phy=tree_adult_eye_eco, data=adult_eye_eco, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#fit pgls model for lens vs. eye size
+hab.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter + adult_ecology,
+                       data = hab.eye.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(hab.eye.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(hab.eye.pgls)
+
+#view coefficients
+summary(hab.eye.pgls)
+
+
+## Alternate fit of PGLS using geomorph-----
 
 #PGLS of lens size ~ eye size  + habitat
 hab_eye_procD <- procD.pgls(mean.lens.diameter ~ mean.eye.diameter + adult_ecology, tree_adult_eye_eco, Cov = NULL, iter = 999, seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_eco, print.progress = TRUE)
@@ -1073,7 +1098,31 @@ adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$d
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
 
-#run PGLS-----
+#run PGLS using caper-----
+
+# pgls in caper of lens ~ eye for plotting residuals---
+
+#make comparative object
+act.eye.comp <- comparative.data(phy=tree.eye.activ, data=adult_eye_activ, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
+
+#fit pgls model for lens vs. eye size
+act.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter + activity_period,
+                       data = hab.eye.comp, 
+                       lambda="ML")
+
+#check model assumptions
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(act.eye.pgls)
+par(mfrow = c(1, 1))
+
+#view main effects
+anova(act.eye.pgls)
+
+#view coefficients
+summary(act.eye.pgls)
+
+#run alternate PGLS in geomorph-----
 
 #PGLS of lens size ~  eye size + activity period
 act_eye_procD <- procD.pgls(mean.lens.diameter~mean.eye.diameter + activity_period, tree.eye.activ, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = adult_eye_activ, print.progress = TRUE)
@@ -1824,17 +1873,14 @@ dev.off()
 
 # pgls in caper of lens ~ eye for plotting residuals---
 
-#make comparative object
-hab.eye.comp <- comparative.data(phy=tree_adult_eye_eco, data=adult_eye_eco, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
-
 #fit pgls model for lens vs. eye size
-hab.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
+hab.lenseye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
                        data = hab.eye.comp, 
                        lambda="ML")
 
 
 #extract pgls residuals 
-pglsres.habeye <- residuals(hab.eye.pgls) 
+pglsres.habeye <- residuals(hab.lenseye.pgls) 
 
 #name residuals
 colnames(pglsres.habeye) <- "pglsres.habeye" 
@@ -1856,16 +1902,13 @@ gg_eco<-ggplot(adult_eye_eco, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_
 
 # pgls in caper of lens ~ eye for plotting residuals---
 
-#make comparative object
-act.eye.comp <- comparative.data(phy=tree.eye.activ, data=adult_eye_activ, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
-
 #fit pgls model for lens vs. eye size
-act.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
+act.lenseye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter,
                        data = act.eye.comp, 
                        lambda="ML")
 
 #extract pgls residuals 
-pglsres.acteye <- residuals(act.eye.pgls) 
+pglsres.acteye <- residuals(act.lenseye.pgls) 
 
 #name residuals
 colnames(pglsres.acteye) <- "pglsres.acteye" 
