@@ -14,7 +14,7 @@ output:
 ```{r setup, include = FALSE}
 
 # Markdown settings
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.height = 5, fig.width = 8, attr.output='style="max-height: 200px;"') 
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 8, attr.output='style="max-height: 400px;"') 
 
 # Load packages
 library(cowplot)
@@ -145,8 +145,11 @@ n_matched_families <- length(levels(species_matched$family))
 ```
 
 Species sampling by life stage:
+
 Number of species with adult data: `r n_adult_species`
+
 Number of species with tadpole data: `r n_tadpole_species`
+
 Number of species with both tadpole and adult data (matched): `r n_matched_species`
 
 ## Species with eye size data
@@ -248,7 +251,7 @@ LR_lens_data <- lens_data %>%
   ungroup() 
 
 #subset left and right data  then merge left and right by specimen
-arrange(LR_lens_data, specimen_id, genus_species, life_stage)
+#arrange(LR_lens_data, specimen_id, genus_species, life_stage)
 
 L_lens_data <- filter(LR_lens_data, lens == "left")
 R_lens_data <- filter(LR_lens_data, lens == "right")
@@ -311,7 +314,8 @@ plot <- plot_grid(anis_lr_plot, flat_lr_plot, spher_lr_plot, elong_lr_plot,
 
 #print figure
 plot
-
+```
+```{r, results="hide"}
 #export figure
 pdf(file = "Figures/Fig-supp-LR_lens_shape.pdf", width = 9,  height = 7)
 plot
@@ -580,7 +584,7 @@ Here, we examine a subset of species (n = 44) that have matched tadpole and adul
 
 ### Phylogenetic signal
 
-Here, we estimated phylogenetic signal in tadpole lens shape, in adult lens shape, and in the change in lens shape through ontogeny (difference between adults and tadpoles within species). For these analyses, lens shape was represented by the PCA scores from the above analysis, which allowed us to use a multivariate approach. 
+Here, we estimated phylogenetic signal in tadpole lens shape, in adult lens shape, and in the change in lens shape through ontogeny (difference between adults and tadpoles within species). For these analyses, we used the physignal function in the geomorph package, which estimates the multivariate version of the K-statistic (Kmult; Adams 2014) and allowed us to incorporate all three shape metrics (anisotropy, sphericity, elongation) simultaneously. 
 
 ```{r phylogenetic signal}
 
@@ -630,7 +634,8 @@ rownames(phylo_pca_means)<-phylo_pca_means$genus_species;
 name.check(tree_orig,phylo_pca_means)->overlap
 #overlap
 drop.tip(tree_orig,overlap$tree_not_data)->tree.pruned;
-plot(tree.pruned)
+#plot(tree.pruned)
+
 #Remove excess data from species not found in tree
 phylo_pca_means<-phylo_pca_means[ ! phylo_pca_means$genus_species %in% overlap$data_not_tree, ]
 phylo_pca_means[] <- lapply(phylo_pca_means, function(x) if(is.factor(x)) factor(x) else x)
@@ -652,7 +657,8 @@ rownames(tad_phylo_means)<-tad_phylo_means$genus_species;
 name.check(tree_orig,tad_phylo_means)->overlap
 #overlap
 drop.tip(tree_orig,overlap$tree_not_data)->tree.tad;
-plot(tree.tad)
+#plot(tree.tad)
+
 #Remove excess data from species not found in tree
 tad_phylo_means<-tad_phylo_means[ ! tad_phylo_means$genus_species %in% overlap$data_not_tree, ]
 tad_phylo_means[] <- lapply(tad_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
@@ -664,7 +670,8 @@ rownames(adult_phylo_means)<-adult_phylo_means$genus_species;
 name.check(tree_orig,adult_phylo_means)->overlap
 #overlap
 drop.tip(tree_orig,overlap$tree_not_data)->tree.adult;
-plot(tree.adult)
+#plot(tree.adult)
+
 #Remove excess data from species not found in tree
 adult_phylo_means<-adult_phylo_means[ ! adult_phylo_means$genus_species %in% overlap$data_not_tree, ]
 adult_phylo_means[] <- lapply(adult_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
@@ -676,7 +683,8 @@ rownames(both_phylo_means)<-both_phylo_means$genus_species;
 name.check(tree_orig,both_phylo_means)->overlap
 #overlap
 drop.tip(tree_orig,overlap$tree_not_data)->tree.both;
-plot(tree.both)
+#plot(tree.both)
+
 #Remove excess data from species not found in tree
 both_phylo_means<-both_phylo_means[ ! both_phylo_means$genus_species %in% overlap$data_not_tree, ]
 both_phylo_means[] <- lapply(both_phylo_means, function(x) if(is.factor(x)) factor(x) else x)
