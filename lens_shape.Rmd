@@ -65,6 +65,8 @@ lens_data_tidy <- lens_data %>%
   mutate(activity_period = recode(activity_period, "cathemeral" = "both")) %>%
   #change unknown activity period to NA
   mutate(activity_period = na_if(activity_period, "unknown")) %>%
+  #change unknown adult habitat to NA
+  mutate(adult_ecology = na_if(adult_ecology, "unknown")) %>%
   #select only used columns of data
   select(specimen_id, order, family, genus, species, life_stage, lens, flatness, anisotropy, elongation, sphericity, eye_diameter_mm, lens_diameter_mm,  sv_length_mm, stain, scan_type, adult_ecology, ae_source, activity_period, ap_source, comments, scan_source, scan_technician)
 ```
@@ -190,16 +192,13 @@ This dataframe pulls out the specimens that we were able to get 2D eye size meas
 ```{r subsets for eye data in anura only - activity and ecology}
 
 #create dataframe for eye subset
-eye_mean <- lens_data %>%
+eye_mean <- lens_data_tidy %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% 
   mutate_if(is.character, as.factor) %>% 
   filter(life_stage == c("adult", "tadpole"))  %>% 
   group_by(genus_species, life_stage, adult_ecology, activity_period) %>%
   summarise(mean.eye.diameter = mean(eye_diameter_mm, na.rm = TRUE),
-            mean.axial.length = mean(axial_length_mm, na.rm = TRUE),
-            mean.lens.retina.length = mean(lens_to_retina_mm, na.rm = TRUE),
             mean.lens.diameter = mean(lens_diameter_mm, na.rm = TRUE),
-            mean.lens.depth = mean(lens_depth_mm, na.rm = TRUE),
             n = n())
 
 #convert NaN values to NA 
@@ -231,7 +230,7 @@ The following dataframe subsets the specimens and lenses that were measured mult
 
 ```{r subset to dataframe for repeat measures}
 
-lens_repeat <- lens_data %>%
+lens_repeat <- lens_data_tidy %>%
   filter(life_stage == "repeat" & specimen_id != "USNM299711")
   
 ```
@@ -268,7 +267,7 @@ The following creates a dataframe with **one row per specimen**. Shape data for 
 ```{r left-right-wide}
 
 # dataframe that averages by specimen
-LR_lens_data <- lens_data %>%
+LR_lens_data <- lens_data_tidy %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62" & life_stage != "artificial") %>%
   mutate_if(is.character, as.factor) %>% 
@@ -844,7 +843,7 @@ Here, we run a series of PGLS regressions to test for associations between each 
 #prep data and tree----
 
 #subset adults with habitat data
-adult_phylo_eco<-filter(adult_phylo_means, adult_ecology.adults != "unknown")
+adult_phylo_eco<-filter(adult_phylo_means, !is.na(adult_ecology.adults))
 table(adult_phylo_eco$adult_ecology.adults)
 
 #trim tree to adults with habitat data
@@ -928,7 +927,7 @@ summary(eco.elong.pgls)
 #prep data and tree----
 
 #subset adults with activity period data
-adult_phylo_activ<-filter(adult_phylo_means, activity_period.adults != "unknown")
+adult_phylo_activ<-filter(adult_phylo_means, !is.na(activity_period.adults))
 table(adult_phylo_activ$activity_period.adults)
 
 #trim tree to adults with activity period data
@@ -1055,7 +1054,7 @@ Here, we test whether lens size (relative to eye size) varies across habitats or
 table(adult_eye$adult_ecology)
 
 # Make tree-trimmed dataset for habitat analysis of lens size 
-adult_eye_eco <- filter(adult_eye, adult_ecology != "unknown") %>% droplevels()
+adult_eye_eco <- filter(adult_eye, !is.na(adult_ecology)) %>% droplevels()
 adult_eye_eco[] <- lapply(adult_eye_eco, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_eco<-as.data.frame(adult_eye_eco)
 
@@ -1119,7 +1118,7 @@ summary(PairHabTest)
 table(adult_eye$activity_period)
 
 #Make tree-trimmed dataset for activity analysis of lens size 
-adult_eye_activ<-filter(adult_eye, activity_period != "unknown") %>% droplevels()
+adult_eye_activ<-filter(adult_eye, !is.na(activity_period)) %>% droplevels()
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 table(adult_eye_activ$activity_period)
 adult_eye_activ<-as.data.frame(adult_eye_activ)
@@ -1799,8 +1798,7 @@ col_act <- c("both" = "deeppink3",
              "nocturnal" = "blueviolet")
 
 #adjust naming of categories
-adult_phylo_activ <- adult_phylo_activ %>%
-  mutate(activity_period = recode(activity_period, "cathemeral" = "both"))
+adult_phylo_activ <- adult_phylo_activ
 
 # Adult habitat ------
 
@@ -1953,8 +1951,7 @@ pglsres.acteye <- residuals(act.lenseye.pgls)
 colnames(pglsres.acteye) <- "pglsres.acteye" 
 
 #merge residuals with original data by rowname
-adult_eye_activ2 <- merge(adult_eye_activ, pglsres.acteye, by = "row.names") %>%
-  mutate(activity_period = recode(activity_period, "cathemeral" = "both"))
+adult_eye_activ2 <- merge(adult_eye_activ, pglsres.acteye, by = "row.names")
 
 #make plot of caper pgls resudals across activity periods
 gg_activ<-ggplot(adult_eye_activ2, aes(x=activity_period, y=pglsres.acteye, fill=activity_period)) + 
