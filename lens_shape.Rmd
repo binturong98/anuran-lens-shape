@@ -88,19 +88,22 @@ n_adult_specimens <- nrow(specimen_means2 %>% filter(life_stage=="adult"))
 n_tad_specimens <- nrow(specimen_means2 %>% filter(life_stage=="tadpole"))
 n_family <- length(levels(specimen_means2$family))
 n_species <- length(levels(specimen_means2$genus_species))
-
-#number of specimens by source
-num_specimen <- specimen_means2 %>%
-  group_by(life_stage) %>%
-  count(scan_source)
 ```
 
 Number of specimens sampled total: `r n_specimen`
 Number of adult specimens sampled: `r n_adult_specimens`
 Number of tadpole specimens sampled: `r n_tad_specimens`
-Number of families sampled `r n_family`
-Number of species sampled `r n_species`
-Number of specimens sampled by source `r num_specimen'`
+Number of families sampled: `r n_family`
+Number of species sampled: `r n_species`
+
+Number of specimens sampled by source: 
+
+```{r}
+#number of specimens by source
+specimen_means2 %>%
+  group_by(life_stage) %>%
+  count(scan_source)
+```
 
 
 ## Mean lens shape by species and life stage
