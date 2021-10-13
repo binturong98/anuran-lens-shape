@@ -25,13 +25,13 @@ library(geiger)
 library(stringr)
 library(kableExtra)
 library(plotly)
-library(tidyverse)
 library(geomorph)
 library(RRPP)
 library(viridis)
 library(pca3d)
 library(gridExtra)
 library(caper)
+library(tidyverse)
 ```
 
 # Data and subsetting
@@ -43,11 +43,32 @@ The raw data file contains one row for **each lens** sampled. For most specimens
 ```{r raw-data}
 
 # Load raw data
-lens_data <- read.csv("ct_lenses.csv", header = TRUE)
+lens_data <- read.csv("ct_lenses.csv", header = TRUE, na.strings=c("", "NA", " "))
 
 #Import phylogeny from Jetz and Pyron 2019
 tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
 ```
+
+## tidy up data
+
+Here, we tidy up a few messy things. For activity period, cathemeral is changed to "both" to mirror the paper, empty ecological fields (or those termed "unknown") are changed to NA. Unused fields (e.g. alternate coding for adult habitat) are removed. When we publish final version, we should download and include this tidied datasheet instead of the raw one. 
+
+```{r}
+lens_data_tidy <- lens_data %>%
+  #capitalize order
+  mutate(order = str_to_title(order)) %>%
+  #capitalize family
+  mutate(family = str_to_title(family)) %>%
+  #capitalize genus
+  mutate(genus = str_to_title(genus)) %>%
+  #change activity period from cathemeral to both
+  mutate(activity_period = recode(activity_period, "cathemeral" = "both")) %>%
+  #change unknown activity period to NA
+  mutate(activity_period = na_if(activity_period, "unknown")) %>%
+  #select only used columns of data
+  select(specimen_id, order, family, genus, species, life_stage, lens, flatness, anisotropy, elongation, sphericity, eye_diameter_mm, lens_diameter_mm,  sv_length_mm, stain, scan_type, adult_ecology, ae_source, activity_period, ap_source, comments, scan_source, scan_technician)
+```
+
 
 ## Mean lens shape by specimen
 
@@ -56,7 +77,7 @@ The following subset includes one row for **each specimen** measured. We created
 ```{r specimen-means}
 
 #Calculate mean lens parameters for each specimen
-specimen_means <- lens_data %>%
+specimen_means <- lens_data_tidy %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
   mutate_if(is.character, as.factor) %>% 
@@ -123,6 +144,7 @@ species_stage_means <- specimen_means %>%
             n_specimens = n())
 
 #add synonym and substitutions for phylogeny into dataframe (genus_species column)
+species_stage_means$genus_species <- as.character(species_stage_means$genus_species)
 species_stage_means[species_stage_means$genus_species=="Hypsiboas_geographica", "genus_species"] <- "Hypsiboas_geographicus"
 species_stage_means[species_stage_means$genus_species=="Chiasmocleis_hudsoni", "genus_species"] <- "Syncope_hudsoni"
 species_stage_means[species_stage_means$genus_species=="Rhombophryne_nilevina", "genus_species"] <- "Rhombophryne_alluaudi"
@@ -1097,7 +1119,7 @@ summary(PairHabTest)
 table(adult_eye$activity_period)
 
 #Make tree-trimmed dataset for activity analysis of lens size 
-adult_eye_activ<-filter(adult_eye, activity_period != "unknown")
+adult_eye_activ<-filter(adult_eye, activity_period != "unknown") %>% droplevels()
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 table(adult_eye_activ$activity_period)
 adult_eye_activ<-as.data.frame(adult_eye_activ)
@@ -1107,7 +1129,7 @@ rownames(adult_eye_activ)<-adult_eye_activ$genus_species;
 name.check(tree_orig,adult_eye_activ)->overlap
 
 #overlap
-drop.tip(tree_orig,overlap$tree_not_data)->tree.eye.activ;
+drop.tip(tree_orig, overlap$tree_not_data)->tree.eye.activ;
 #plot(tree.eye.activ)
 
 #Remove excess data from species not found in tree
