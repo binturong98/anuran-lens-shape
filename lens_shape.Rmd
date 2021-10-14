@@ -67,8 +67,6 @@ lens_data_tidy <- lens_data %>%
   mutate(activity_period = na_if(activity_period, "unknown")) %>%
   #change unknown adult habitat to NA
   mutate(adult_ecology = na_if(adult_ecology, "unknown")) %>%
-  #remove weird specimen from dataset
-  filter(specimen_id != "BMNH1906.8.30.62") %>%
   #select only used columns of data
   select(specimen_id, order, family, genus, species, life_stage, lens, flatness, anisotropy, elongation, sphericity, eye_diameter_mm, lens_diameter_mm,  sv_length_mm, stain, scan_type, adult_ecology, ae_source, activity_period, ap_source, comments, scan_source, scan_technician)
 ```
