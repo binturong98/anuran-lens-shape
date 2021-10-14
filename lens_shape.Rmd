@@ -49,7 +49,7 @@ lens_data <- read.csv("ct_lenses.csv", header = TRUE, na.strings=c("", "NA", " "
 tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
 ```
 
-## tidy up data
+## Tidy up data
 
 Here, we tidy up a few messy things. For activity period, cathemeral is changed to "both" to mirror the paper, empty ecological fields (or those termed "unknown") are changed to NA. Unused fields (e.g. alternate coding for adult habitat) are removed. When we publish final version, we should download and include this tidied datasheet instead of the raw one. 
 
@@ -1135,6 +1135,9 @@ drop.tip(tree_orig, overlap$tree_not_data)->tree.eye.activ;
 adult_eye_activ<-adult_eye_activ[ ! adult_eye_activ$genus_species %in% overlap$data_not_tree, ]
 adult_eye_activ[] <- lapply(adult_eye_activ, function(x) if(is.factor(x)) factor(x) else x)
 adult_eye_activ <-  adult_eye_activ[tree.eye.activ$tip.label, ]
+
+#different factor order for contrasts
+adult_eye_activ$activity_period <- factor(adult_eye_activ$activity_period, levels = c("nocturnal", "diurnal", "both"))
 
 #run PGLS using caper-----
 
