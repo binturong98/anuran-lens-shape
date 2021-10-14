@@ -85,7 +85,7 @@ specimen_means <- lens_data_tidy %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
   filter(life_stage != "repeat") %>%
   mutate_if(is.character, as.factor) %>% 
-  group_by(specimen_id, genus_species, family, life_stage, adult_ecology, activity_period, scan_source) %>%
+  group_by(specimen_id, genus_species, family, life_stage, adult_ecology, activity_period, scan_source, stain) %>%
   summarise(mean_flatness = mean(flatness, na.rm = TRUE),
             mean_anisotropy = mean(anisotropy, na.rm = TRUE),
             mean_elongation = mean(elongation, na.rm = TRUE),
@@ -129,7 +129,14 @@ specimen_means2 %>%
   group_by(life_stage) %>%
   count(scan_source)
 ```
+Number of specimens sampled by staining:
 
+```{r}
+#number of specimens by source
+specimen_means2 %>%
+  group_by(life_stage) %>%
+  count(stain)
+```
 
 ## Mean lens shape by species and life stage
 
