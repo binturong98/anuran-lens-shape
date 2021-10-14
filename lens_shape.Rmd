@@ -51,7 +51,7 @@ tree_orig <- read.tree(file = "amph_shl_new_Consensus_7238.tre") #reads tree
 
 ## Tidy up data
 
-Here, we tidy up a few messy things. For activity period, cathemeral is changed to "both" to mirror the paper, empty ecological fields (or those termed "unknown") are changed to NA. Unused fields (e.g. alternate coding for adult habitat) are removed. When we publish final version, we should download and include this tidied datasheet instead of the raw one. 
+Here, we tidy up a few messy things. For activity period, cathemeral is changed to "both" to mirror the paper, empty ecological fields (or those termed "unknown") are changed to NA. Unused fields (e.g. alternate coding for adult habitat, lens measurements not analyzed, etc.) are removed. When we publish final version, we should download and include this tidied datasheet instead of the raw one. 
 
 ```{r}
 lens_data_tidy <- lens_data %>%
@@ -67,6 +67,8 @@ lens_data_tidy <- lens_data %>%
   mutate(activity_period = na_if(activity_period, "unknown")) %>%
   #change unknown adult habitat to NA
   mutate(adult_ecology = na_if(adult_ecology, "unknown")) %>%
+  #remove weird specimen from dataset
+  filter(specimen_id != "BMNH1906.8.30.62") %>%
   #select only used columns of data
   select(specimen_id, order, family, genus, species, life_stage, lens, flatness, anisotropy, elongation, sphericity, eye_diameter_mm, lens_diameter_mm,  sv_length_mm, stain, scan_type, adult_ecology, ae_source, activity_period, ap_source, comments, scan_source, scan_technician)
 ```
@@ -81,7 +83,7 @@ The following subset includes one row for **each specimen** measured. We created
 #Calculate mean lens parameters for each specimen
 specimen_means <- lens_data_tidy %>%
   mutate(genus_species = as.factor(paste(genus, species, sep = "_"))) %>% # creates a genus_species column
-  filter(life_stage != "repeat" & specimen_id != "BMNH1906.8.30.62") %>%
+  filter(life_stage != "repeat") %>%
   mutate_if(is.character, as.factor) %>% 
   group_by(specimen_id, genus_species, family, life_stage, adult_ecology, activity_period, scan_source) %>%
   summarise(mean_flatness = mean(flatness, na.rm = TRUE),
@@ -1148,7 +1150,7 @@ act.eye.comp <- comparative.data(phy=tree.eye.activ, data=adult_eye_activ, names
 
 #fit pgls model for lens vs. eye size
 act.eye.pgls <- pgls(mean.lens.diameter ~ mean.eye.diameter + activity_period,
-                       data = hab.eye.comp, 
+                       data = act.eye.comp, 
                        lambda="ML")
 
 #check model assumptions
