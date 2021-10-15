@@ -1819,7 +1819,8 @@ anis_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_anisotropy, fil
   labs(title=NULL,x="Habitat", y = "Anisotropy value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic() +
+  ylim(c(0, 0.6))
  
 #sphericity
 sph_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_sphericity, fill=adult_ecology)) + 
@@ -1828,7 +1829,8 @@ sph_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_sphericity, fill
   labs(title=NULL,x="Habitat", y = "Sphericity value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic() +
+  ylim(c(0.85, 1))
 
 #elongation
 elong_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_elongation, fill=adult_ecology)) + 
@@ -1837,7 +1839,8 @@ elong_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_elongation, fi
   labs(title=NULL,x="Habitat", y = "Elongation value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic()+
+  ylim(c(0.8, 1))
 
 # Adult activity period ------
 #anisotropy
@@ -1847,7 +1850,8 @@ anis_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_anisotropy, 
   labs(title=NULL,x="Activity Period", y = "Anisotropy value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic() +
+  ylim(c(0, 0.6))
  
 #sphericity
 sph_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_sphericity, fill=activity_period)) + 
@@ -1856,7 +1860,8 @@ sph_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_sphericity, f
   labs(title=NULL,x="Activity Period", y = "Sphericity value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic()+
+  ylim(c(0.85, 1))
 
 #elongation
 elong_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_elongation, fill=activity_period)) + 
@@ -1865,7 +1870,8 @@ elong_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_elongation,
   labs(title=NULL,x="Activity Period", y = "Elongation value")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic() +
+  ylim(c(0.8, 1))
 
 # Construct main figure -----
 
