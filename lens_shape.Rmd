@@ -1936,14 +1936,14 @@ colnames(pglsres.habeye) <- "pglsres.habeye"
 adult_eye_eco2 <- merge(adult_eye_eco, pglsres.habeye, by = "row.names")
 
 #plot with caper pgls residuals
-gg_eco<-ggplot(adult_eye_eco, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_ecology)) + 
+gg_eco<-ggplot(adult_eye_eco2, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_ecology)) + 
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Residual Lens Size")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
-
+  theme_classic()  +
+  ylim(c(-1.6, 1.2))
 
 #### Activity Pattern ####
 
@@ -1970,7 +1970,8 @@ gg_activ<-ggplot(adult_eye_activ2, aes(x=activity_period, y=pglsres.acteye, fill
   labs(title=NULL,x="Activity Period", y = "Residual Lens Size")+
   geom_boxplot(width=0.15, fill="white")+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
-  theme_classic()
+  theme_classic() +
+  ylim(c(-1.6, 1.2))
 
 gg_activ 
 
