@@ -1790,7 +1790,7 @@ legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch,
 #export panels A & B-----
 
 #print graph
-pdf(file = "Figures/Fig5AB.pdf", width = 12,  height = 5, useDingbats=FALSE)
+pdf(file = "Figures/Fig5AB.pdf", width = 10,  height = 4, useDingbats=FALSE)
 par(mfrow=c(1,2))
 ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
@@ -1887,13 +1887,15 @@ plots <- plot_grid(fig.c, fig.d, fig.e, fig.f,
            axis = 'lb',
            labels = c("C", "D", "E", "F"), #panel labels for figure
            hjust = -.1, #adjustment for panel labels
-           nrow = 2) #number of rows in grids
+           nrow = 2,
+           rel_widths = c(1.8,1))
+
 
 #print figure
 plots
 
 #export figure
-pdf(file = "Figures/Fig5cdef.pdf", width = 12,  height = 8)
+pdf(file = "Figures/Fig5cdef.pdf", width = 10,  height = 8)
 plots
 dev.off()
 
@@ -1906,13 +1908,14 @@ plots <- plot_grid(elong_habs + theme(legend.position = "none"),
            axis = 'lb',
            labels = c("A", "B"), #panel labels for figure
            hjust = -.1, #adjustment for panel labels
-           nrow = 1) #number of rows in grids
+           nrow = 1,
+           rel_widths = c(1.8,1))
 
 #print figure
 plots
 
 #export figure
-pdf(file = "Figures/Fig-supp-adultelong.pdf", width = 12,  height = 4)
+pdf(file = "Figures/Fig-supp-adultelong.pdf", width = 10,  height = 4)
 plots
 dev.off()
 ```
@@ -1989,12 +1992,13 @@ plots <- plot_grid(gg_eco + theme(legend.position = "none"),
            axis = 'lb',
            labels = c("A", "B"), #panel labels for figure
            hjust = -.1, #adjustment for panel labels
-           nrow = 1) #number of rows in grids
+           nrow = 1,
+           rel_widths = c(1.8,1))
 
 plots
 
 #print graph
-pdf(file = "Figures/Fig6.pdf", width = 12,  height = 4)
+pdf(file = "Figures/Fig6.pdf", width = 10,  height = 4)
 plots
 dev.off()
 
