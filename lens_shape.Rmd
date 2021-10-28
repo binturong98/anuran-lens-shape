@@ -1416,9 +1416,11 @@ dev.off()
 
 ```{r Figure 4}
 
-#### Violin of shape metrics by paired tadpole and adult ####
+# Prep data for tadpole and adult lens shape within species --- 
 
 #put data in long format
+
+#tadpole data
 tadData <- data.frame(species = both_phylo_means$genus_species,
                       anisotropy = both_phylo_means$mean_anisotropy.tads,
                       sphericity = both_phylo_means$mean_sphericity.tads,
@@ -1426,6 +1428,7 @@ tadData <- data.frame(species = both_phylo_means$genus_species,
                       eco = both_phylo_means$adult_ecology.tads,
                       stage = "tadpole")
 
+#adult data
 adultData <- data.frame(species = both_phylo_means$genus_species,
                         anisotropy = both_phylo_means$mean_anisotropy.adults,
                         sphericity = both_phylo_means$mean_sphericity.adults,
@@ -1433,9 +1436,96 @@ adultData <- data.frame(species = both_phylo_means$genus_species,
                         eco = both_phylo_means$adult_ecology.adults,
                         stage = "adult")
 
+#combine datasets
 matchData <- rbind(tadData, adultData)
 matchData$stage <- factor(matchData$stage, levels = c("tadpole", "adult"))
 matchData$eco <- factor(matchData$eco, levels = c("aquatic","fossorial","subfossorial","semi-aquatic","ground-dwelling","scansorial"))
+
+#add column binning adults into "aquatic" or "terrestrial"
+matchData$hab <- ifelse(matchData$eco=="aquatic", "aquatic", "terrestrial")
+
+#make column that codes for both tadpole and adult habitat (for coloring)
+matchData$hab2 <- ifelse(matchData$stage=="tadpole", "aquatic", matchData$hab)
+
+#make column for faceting/labels based on adult habitat
+matchData$lab <- ifelse(matchData$eco=="aquatic", "aquatic adult", "terrestrial adult")
+
+# Make Figure 4 ------
+
+#define habitat colors
+col_hab_binary <- c("aquatic" = "#0072B2",
+                    "terrestrial" = "#4d3208")
+
+#define life stage points
+shape_stage <- c("tadpole" = 1,
+                 "adult" = 19)
+
+#plot matched data separated by adult habitats
+
+#anisotropy
+an.paired.plot2 <- ggplot(matchData, aes(x = stage, y = anisotropy, fill = hab2)) +
+  scale_fill_manual(values = col_hab_binary, name = "Habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = "black"), alpha = 0.9) +
+  scale_color_manual(values = col_hab_binary, name = "Habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
+  geom_point(size = 2, alpha = 0.8, aes(shape = stage)) + 
+  labs(x = "Life stage", y = "Anisotropy") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~lab, nrow = 1)
+
+#sphericity
+sp.paired.plot2 <- ggplot(matchData, aes(x = stage, y = sphericity, fill = hab2)) +
+  scale_fill_manual(values = col_hab_binary, name = "Habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = "black"), alpha = 0.9) +
+  scale_color_manual(values = col_hab_binary, name = "Habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
+  geom_point(size = 2, alpha = 0.8, aes(shape = stage)) + 
+  labs(x = "Life stage", y = "Sphericity") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~lab, nrow = 1)
+
+#elongation
+el.paired.plot2 <- ggplot(matchData, aes(x = stage, y = elongation, fill = hab2)) +
+  scale_fill_manual(values = col_hab_binary, name = "Habitat") +
+  scale_shape_manual(values = shape_stage, name = "Life stage") +
+  geom_line(aes(group = species, col = "black"), alpha = 0.9) +
+  scale_color_manual(values = col_hab_binary, name = "Habitat") +
+  geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
+  geom_point(size = 2, alpha = 0.8, aes(shape = stage)) + 
+  labs(x = "Life stage", y = "Elongation") + 
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
+  facet_wrap(~lab, nrow = 1)
+
+# Construct Figure 3BC -------
+
+fig.b <- an.paired.plot2 +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank()) 
+
+fig.c <- sp.paired.plot2 +
+  theme(strip.background = element_blank(), strip.text.x = element_blank()) 
+
+plots <- plot_grid(fig.b, fig.c,
+           align = 'vh', #align horizontally and vertically
+           axis = 'lb',
+           labels = c("B", "C"), #panel labels for figure
+           hjust = -.1, #adjustment for panel labels
+           nrow = 2) #number of rows in grids
+
+#print figure
+plots
+
+#export figure
+pdf(file = "Figures/Fig3bc.pdf", width = 3,  height = 8)
+plots
+dev.off()
+
+
+# Make supplemental figure -----
 
 #define a colorblind-friendly vector of colors for adult habitat
 col_hab <- c("aquatic" = "#0072B2",
@@ -1522,7 +1612,7 @@ plots <- plot_grid(fig.a, fig.b, fig.c,
 plots
 
 #export figure
-pdf(file = "Figures/FigS4.pdf", width = 8,  height = 10)
+pdf(file = "Figures/FigS4.pdf", width = 8,  height = 11)
 plots
 dev.off()
 ```
