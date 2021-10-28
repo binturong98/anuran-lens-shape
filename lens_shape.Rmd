@@ -1628,7 +1628,7 @@ dev.off()
 
 Part 1: PCA centroids for adult lens shape vs ecology (habitat and activity period)
 
-```{r Figure 5ab}
+```{r Figure 4ab}
 
 #adult eye measures vs habitat 
 adult_phylo_eco<-filter(adults_mean, adult_ecology != "unknown")
@@ -1708,7 +1708,7 @@ legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch,
 #export panels A & B-----
 
 #print graph
-pdf(file = "Figures/Fig5AB.pdf", width = 10,  height = 4, useDingbats=FALSE)
+pdf(file = "Figures/Fig4AB.pdf", width = 15,  height = 6, useDingbats=FALSE)
 par(mfrow=c(1,2))
 ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
@@ -1718,15 +1718,12 @@ dev.off()
 
 Part 2: Violin plots of adult lens shape across ecology (habitat and activity period)
 
-```{r Figure 5cd}
+```{r Figure 4cdef}
 
 #create vector of colors for activity period
 col_act <- c("both" = "deeppink3",
              "diurnal" = "darkgoldenrod1", 
              "nocturnal" = "blueviolet")
-
-#adjust naming of categories
-adult_phylo_activ <- adult_phylo_activ
 
 # Adult habitat ------
 
@@ -1735,7 +1732,7 @@ anis_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_anisotropy, fil
   geom_violin(trim=FALSE, alpha = 0.7)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Anisotropy value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic() +
   ylim(c(0, 0.6))
@@ -1745,7 +1742,7 @@ sph_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_sphericity, fill
   geom_violin(trim=FALSE, alpha = 0.7)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Sphericity value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic() +
   ylim(c(0.85, 1))
@@ -1755,7 +1752,7 @@ elong_habs <- ggplot(adult_phylo_eco, aes(x=adult_ecology, y=mean_elongation, fi
   geom_violin(trim=FALSE, alpha = 0.7)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Elongation value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic()+
   ylim(c(0.8, 1))
@@ -1766,7 +1763,7 @@ anis_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_anisotropy, 
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Anisotropy value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic() +
   ylim(c(0, 0.6))
@@ -1776,7 +1773,7 @@ sph_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_sphericity, f
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Sphericity value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic()+
   ylim(c(0.85, 1))
@@ -1786,7 +1783,7 @@ elong_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_elongation,
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Elongation value")+
-  geom_boxplot(width=0.15, fill="white")+
+  geom_boxplot(width=0.15, fill="white", outlier.alpha = 0)+
   geom_jitter(shape = 19, size = 1, alpha = 0.7, position = position_jitter(0.1)) + 
   theme_classic() +
   ylim(c(0.8, 1))
@@ -1794,17 +1791,55 @@ elong_act <- ggplot(adult_phylo_activ, aes(x=activity_period, y=mean_elongation,
 # Construct main figure -----
 
 #make panels without lengends
-fig.c <- anis_habs + theme(legend.position = "none")
-fig.e <- sph_habs + theme(legend.position = "none")
-fig.d <- anis_act + theme(legend.position = "none")
-fig.f <- sph_act + theme(legend.position = "none")
+fig.c <- anis_habs + 
+  theme(legend.position = "none", 
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        text = element_text(size = 16)) +
+  ylab("Anisotropy") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") )
+
+fig.d <- anis_act + 
+  theme(legend.position = "none",
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        text = element_text(size = 16)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_x_discrete(breaks = c("diurnal","nocturnal","both"),
+                   limits = c("diurnal","nocturnal","both"),
+                   labels = c("diurnal", "nocturnal", "other"))
+
+fig.e <- sph_habs + 
+  theme(legend.position = "none",
+        text = element_text(size = 16)) +
+  xlab("Habit") +
+  ylab("Sphericity") +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") )
+  
+fig.f <- sph_act + 
+  theme(legend.position = "none",
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        text = element_text(size = 16)) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_x_discrete(breaks = c("diurnal","nocturnal","both"),
+                   limits = c("diurnal","nocturnal","both"),
+                   labels = c("diur.", "noct.", "neith."))
 
 #make panels just with anisotropy and sphericity for habitat and activity period
 plots <- plot_grid(fig.c, fig.d, fig.e, fig.f,
            align = 'vh', #align horizontally and vertically
            axis = 'lb',
            labels = c("C", "D", "E", "F"), #panel labels for figure
-           hjust = -.1, #adjustment for panel labels
+           hjust = 0, #adjustment for panel labels
            nrow = 2,
            rel_widths = c(1.8,1))
 
@@ -1813,7 +1848,7 @@ plots <- plot_grid(fig.c, fig.d, fig.e, fig.f,
 plots
 
 #export figure
-pdf(file = "Figures/Fig5cdef.pdf", width = 10,  height = 8)
+pdf(file = "Figures/Fig4cdef.pdf", width = 8,  height = 8)
 plots
 dev.off()
 
@@ -1839,7 +1874,7 @@ dev.off()
 ```
 
 
-## Figure 6: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
+## Figure 5: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
 
 ```{r Figure 6}
 
