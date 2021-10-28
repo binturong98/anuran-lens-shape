@@ -834,12 +834,6 @@ table(both_phylo_means$env)
 #procD.pgls of lens shape differences in all 3 measures 
 procD<-procD.pgls(both_phylo_means[,c("mean_anisotropy.diff","mean_elongation.diff","mean_sphericity.diff")]~env, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
 summary(procD)
-
-
-#pairwise comparisons
-PairEcoTest<-pairwise(procD, fit.null = NULL, both_phylo_means$adult_ecology.adults, covariate = NULL, print.progress = FALSE)
-summary(PairEcoTest)
-
 ```
 
 ## Q3 Adult lens shape and size vs ecology
