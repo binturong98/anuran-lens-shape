@@ -1295,7 +1295,9 @@ anis.plot <- shape.final %>%
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("") +
   ylab("Anisotropy value") +
-  ylim(c(0,0.5))
+  ylim(c(0,0.5)) +
+  #add line for perfect sphere
+  geom_hline(yintercept=0, linetype = "dashed")
 
 #sphericity plot
 spher.plot <- shape.final %>%
@@ -1308,7 +1310,9 @@ spher.plot <- shape.final %>%
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("") +
   ylab("Sphericity value") +
-  ylim(c(0.75,1))
+  ylim(c(0.75,1)) +
+  #add line for perfect sphere
+  geom_hline(yintercept=1, linetype = "dashed")
 
 #elongation value
 elong.plot <- shape.final %>%
@@ -1321,7 +1325,9 @@ elong.plot <- shape.final %>%
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
   xlab("") +
   ylab("Elongation value") +
-  ylim(c(0.75,1))
+  ylim(c(0.75,1)) +
+  #add line for perfect sphere
+  geom_hline(yintercept=1, linetype = "dashed")
 
 
 # Construct figure -------
@@ -1353,7 +1359,7 @@ dev.off()
 ```
 
 
-## Figure 3 : Phylogeny with PC scores. 
+## Figure 3A : Phylogeny with PC scores. 
 
 Species names are coloured by microhabitat. Circles and dotted lines added in illustrator
 
@@ -1412,7 +1418,7 @@ dev.off()
 ```
 
 
-## Figure 4: Species with matched tadpole and adult lens shape data across adult habitats. 
+## Figure 3BC & S4: Species with matched tadpole and adult lens shape data across adult habitats. 
 
 ```{r Figure 4}
 
@@ -1618,7 +1624,7 @@ dev.off()
 ```
 
 
-## Figure 5: Adult lens shape by ecology
+## Figure 4: Adult lens shape by ecology
 
 Part 1: PCA centroids for adult lens shape vs ecology (habitat and activity period)
 
