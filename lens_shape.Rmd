@@ -1412,9 +1412,9 @@ dev.off()
 ```
 
 
-## Figure 4 - New version: Species with matched tadpole and adult lens shape data across adult habitats. 
+## Figure 4: Species with matched tadpole and adult lens shape data across adult habitats. 
 
-```{r Figure 4new}
+```{r Figure 4}
 
 #### Violin of shape metrics by paired tadpole and adult ####
 
@@ -1466,11 +1466,11 @@ an.paired.plot <- ggplot(matchData, aes(x = stage, y = anisotropy, fill = eco)) 
   geom_line(aes(group = species, col = eco), alpha = 1) +
   scale_color_manual(values = col_hab, name = "Adult habitat") +
   geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
   labs(x = "Life stage", y = "Anisotropy") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
-  facet_wrap(~eco)
+  facet_wrap(~eco, nrow = 1)
   
 #sphericity
 sp.paired.plot <- ggplot(matchData, aes(x = stage, y = sphericity, fill = eco)) +
@@ -1479,11 +1479,11 @@ sp.paired.plot <- ggplot(matchData, aes(x = stage, y = sphericity, fill = eco)) 
   geom_line(aes(group = species, col = eco), alpha = 1) +
   scale_color_manual(values = col_hab, name = "Adult habitat") +
   geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
   labs(x = "Life stage", y = "Sphericity") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
-  facet_wrap(~eco)
+  facet_wrap(~eco, nrow = 1)
 
 #elongation
 el.paired.plot <- ggplot(matchData, aes(x = stage, y = elongation, fill = eco)) +
@@ -1492,40 +1492,38 @@ el.paired.plot <- ggplot(matchData, aes(x = stage, y = elongation, fill = eco)) 
   geom_line(aes(group = species, col = eco), alpha = 1) +
   scale_color_manual(values = col_hab, name = "Adult habitat") +
   geom_violin(alpha=0.5, trim = T, width = .8, position = position_dodge(1)) + 
-  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white") +
+  geom_boxplot(width = 0.2, position = position_dodge(1), fill="white", outlier.alpha = 0) +
   geom_point(size = 2, alpha = 0.9, aes(shape = stage)) + 
   labs(x = "Life stage", y = "Elongation") + 
   theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") +
-  facet_wrap(~eco)
+  facet_wrap(~eco, nrow = 1)
 
 
+# Construct supplemental figure -------
+
+fig.a <- an.paired.plot +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank()) 
+
+fig.b <- sp.paired.plot +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) 
+
+fig.c <- el.paired.plot +
+  theme(strip.background = element_blank(), strip.text.x = element_blank()) 
 
 
-# Construct main figure -------
-
-plots <- plot_grid(an.paired.plot, sp.paired.plot,
+plots <- plot_grid(fig.a, fig.b, fig.c,
            align = 'vh', #align horizontally and vertically
            axis = 'lb',
-           labels = c("A", "B"), #panel labels for figure
+           labels = c("A", "B", "C"), #panel labels for figure
            hjust = -.1, #adjustment for panel labels
-           nrow = 2) #number of rows in grids
+           nrow = 3) #number of rows in grids
 
 #print figure
 plots
 
 #export figure
-pdf(file = "Figures/Fig4.pdf", width = 8,  height = 12)
+pdf(file = "Figures/FigS4.pdf", width = 8,  height = 10)
 plots
-dev.off()
-
-# Supplemental figure -------
-
-#print figure
-el.paired.plot
-
-#export figure
-pdf(file = "Figures/Fig-supp-paired.pdf", width = 8,  height = 6)
-el.paired.plot
 dev.off()
 ```
 
