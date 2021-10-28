@@ -1020,21 +1020,6 @@ summary(act.elong.pgls)
 
 ### Procrustes MANOVA: Adult lens shape vs. ecology
 
-#### Tadpole lens shape vs. adult ecology (DELETE???)
-
-Here is a Procrustes MANOVA of tadpole lens shape (multivariate) across adult habitats. Currently, this is not included in the manuscript. There is no significant effect of adult habitat on tadpole lens shape. 
-
-```{r PGLS tadpole lens shape by ecology}
-
-#check tadpole dataset has correct ecology levels
-table(tad_phylo_means$adult_ecology.adults)
-
-#procD.pgls of differences in tadpole eye shape (all 3 measures) across adulthabitats
-procD<-procD.pgls(tad_phylo_means[,c("mean_anisotropy.tads","mean_elongation.tads","mean_sphericity.tads")]~adult_ecology.tads, tree.tad, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = tad_phylo_means, print.progress = TRUE)
-summary(procD)
-
-```
-
 #### Adult habitat
 
 ```{r}
