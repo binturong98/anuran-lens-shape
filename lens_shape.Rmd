@@ -1,7 +1,7 @@
 ---
 title: "Analyses for: Lens morphology is influenced by ecology in frogs and toads"
 authors: "A.T. Mitra, K.N. Thomas, M.C. Womack"
-date: "15 Oct 2021"
+date: "28 Oct 2021"
 output:
   html_document:
     theme: flatly
@@ -749,7 +749,7 @@ physignal(as.matrix(both_phylo_means[,c("mean_anisotropy.adults","mean_elongatio
 
 ### Difference between tadpole and adult lens shape vs ecology
 
-Here, we examine whether the change in lens shape through ontogeny (difference between tadpole and adult lens shape within species) is correlated with adult habitat. We do this first by examining each 3D lens metric individually, and then with a multivariate approach. 
+Here, we examine whether the change in lens shape through ontogeny (difference between tadpole and adult lens shape within species) differs across species that remain aquatic vs. transition to terrestrial environments. We do this first by examining each 3D lens metric individually, and then with a multivariate approach. 
 
 #### PGLS 
 
@@ -757,15 +757,24 @@ Here, we examine whether the change in lens shape through ontogeny (difference b
 
 #pgls regressions testing for effect of adult habitat on each 3D shape metric (separately)
 
-#prep data/tree
-both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] #Align data and phylogeny labels
+#prep data/tree ----
+
+#add aquatic vs. terrestrial category
+both_phylo_means$env <- ifelse(both_phylo_means$adult_ecology.adults=="aquatic", "aquatic", "terrestrial")
+
+#align data and phylogeny labels
+both_phylo_means <-  both_phylo_means[tree.both$tip.label, ] 
+
+#label tree nodes
 geocapertree <- makeNodeLabel(tree.both, method = "number", prefix = "Node")
+
+#make comparative object
 geocaperdata <- comparative.data(phy=geocapertree, data=both_phylo_means, names.col=genus_species, vcv=TRUE, na.omit=FALSE, warn.dropped=TRUE)
 
 #pgls for anisotropy----
 
 #fit model
-aniso.pgls<-pgls(mean_anisotropy.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+aniso.pgls <- pgls(mean_anisotropy.diff~env, data=geocaperdata, lambda="ML")
 
 #check model assumptions
 par(mar = c(4,4,2,2))
@@ -783,7 +792,7 @@ summary(aniso.pgls)
 #pgls for sphericity----
 
 #fit model
-sphere.pgls<-pgls(mean_sphericity.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
+sphere.pgls <- pgls(mean_sphericity.diff~env, data=geocaperdata, lambda="ML")
 
 #check model assumptions
 par(mar = c(4,4,2,2))
@@ -800,8 +809,7 @@ summary(sphere.pgls)
 #pgls for elongation----
 
 #fit model
-elong.pgls<-pgls(mean_elongation.diff~adult_ecology.adults,data=geocaperdata, lambda="ML")
-summary(elong.pgls)
+elong.pgls<-pgls(mean_elongation.diff~env,data=geocaperdata, lambda="ML")
 
 #check model assumptions
 par(mar = c(4,4,2,2))
@@ -821,10 +829,10 @@ summary(elong.pgls)
 ```{r}
 
 #check adequate levels for testing
-table(both_phylo_means$adult_ecology.adults)
+table(both_phylo_means$env)
 
 #procD.pgls of lens shape differences in all 3 measures 
-procD<-procD.pgls(both_phylo_means[,c("mean_anisotropy.diff","mean_elongation.diff","mean_sphericity.diff")]~adult_ecology.adults, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
+procD<-procD.pgls(both_phylo_means[,c("mean_anisotropy.diff","mean_elongation.diff","mean_sphericity.diff")]~env, tree.both, Cov = NULL, iter = 999,seed = NULL, int.first = FALSE, SS.type = NULL, effect.type = NULL, data = both_phylo_means, print.progress = TRUE)
 summary(procD)
 
 
@@ -1400,21 +1408,15 @@ segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_tad*50), 1:nrow
 segments(550 + (PC1_adult*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="black", lwd=5)
 
 #Export figure
-pdf(file = "Figures/Fig3.pdf", width = 6,  height = 12)
+pdf(file = "Figures/Fig3a.pdf", width = 6,  height = 12)
 plot(tree.pruned, show.tip.label= F, font=3, cex=0.5, label.offset = 1.5, edge.width=3, x.lim=c(0,700))
 par(fg="black")
 tt<-gsub("_"," ",tree.pruned$tip.label)
-text(lastPP$xx[1:length(tt)],lastPP$yy[1:length(tt)], tt,cex=0.5,col=SemiEcoColr, pos=4, offset=0.1, font=3)
+text(lastPP$xx[1:length(tt)],lastPP$yy[1:length(tt)], tt,cex=0.5, col=SemiEcoColr, pos=4, offset=0.1, font=3)
 segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="grey90", lwd=5)
 segments(550 + (PC1_tad*50), 1:nrow(phylo_pca_means), 550 + (PC1_tad*50), 1:nrow(phylo_pca_means), col="grey", lwd=5)
 segments(550 + (PC1_adult*50), 1:nrow(phylo_pca_means), 550 + (PC1_adult*50), 1:nrow(phylo_pca_means), col="black", lwd=5)
 dev.off()
-
-# I think this is not used
-# for(i in 1:Ntip(tree.pruned)) lines(c(lastPP$xx[i],max(lastPP$xx[1:Ntip(tree.pruned)])),
-#                            rep(lastPP$yy[i],2),lty="dotted")
-# par(fg="transparent")
-# plot(tree.pruned,lwd=3,add=TRUE,x.lim=c(0,700))
 ```
 
 
@@ -1708,7 +1710,7 @@ legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch,
 #export panels A & B-----
 
 #print graph
-pdf(file = "Figures/Fig4AB.pdf", width = 15,  height = 6, useDingbats=FALSE)
+pdf(file = "Figures/Fig4AB.pdf", width = 13,  height = 5, useDingbats=FALSE)
 par(mfrow=c(1,2))
 ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
 activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
@@ -1876,7 +1878,7 @@ dev.off()
 
 ## Figure 5: Violins of relative lens size by microhabitat (Panel A) and activity pattern (Panel B)
 
-```{r Figure 6}
+```{r Figure 5}
 
 #### Habitat ####
 
@@ -1898,8 +1900,8 @@ colnames(pglsres.habeye) <- "pglsres.habeye"
 adult_eye_eco2 <- merge(adult_eye_eco, pglsres.habeye, by = "row.names")
 
 #plot with caper pgls residuals
-gg_eco<-ggplot(adult_eye_eco2, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_ecology)) + 
-  geom_violin(trim=FALSE, alpha = 0.5)+
+gg_eco <- ggplot(adult_eye_eco2, aes(x=adult_ecology, y=pglsres.habeye, fill=adult_ecology)) + 
+  geom_violin(trim=FALSE, alpha = 0.7)+
   scale_fill_manual(values = col_hab, name = "Adult habitat") +
   labs(title=NULL,x="Habitat", y = "Residual Lens Size")+
   geom_boxplot(width=0.15, fill="white")+
@@ -1926,7 +1928,7 @@ colnames(pglsres.acteye) <- "pglsres.acteye"
 adult_eye_activ2 <- merge(adult_eye_activ, pglsres.acteye, by = "row.names")
 
 #make plot of caper pgls resudals across activity periods
-gg_activ<-ggplot(adult_eye_activ2, aes(x=activity_period, y=pglsres.acteye, fill=activity_period)) + 
+gg_activ <- ggplot(adult_eye_activ2, aes(x=activity_period, y=pglsres.acteye, fill=activity_period)) + 
   geom_violin(trim=FALSE, alpha = 0.5)+
   scale_fill_manual(values = col_act, name = "Adult activity period") +
   labs(title=NULL,x="Activity Period", y = "Residual Lens Size")+
@@ -1939,8 +1941,23 @@ gg_activ
 
 #Construct figure----
 
-plots <- plot_grid(gg_eco + theme(legend.position = "none"), 
-                   gg_activ + theme(legend.position = "none"),
+fig.a <- gg_eco + 
+  theme(legend.position = "none", 
+        text = element_text(size = 16)) +
+  scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
+                   labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") ) +
+  xlab("Habit")
+  
+  
+fig.b <- gg_activ + 
+  theme(legend.position = "none", 
+        text = element_text(size = 16)) +
+  scale_x_discrete(breaks = c("diurnal","nocturnal","both"),
+                 limits = c("diurnal","nocturnal","both"),
+                 labels = c("diur.", "noct.", "neith."))
+
+plots <- plot_grid(fig.a, fig.b,
            align = 'vh', #align horizontally and vertically
            axis = 'lb',
            labels = c("A", "B"), #panel labels for figure
@@ -1951,7 +1968,7 @@ plots <- plot_grid(gg_eco + theme(legend.position = "none"),
 plots
 
 #print graph
-pdf(file = "Figures/Fig6.pdf", width = 10,  height = 4)
+pdf(file = "Figures/Fig5.pdf", width = 8,  height = 4)
 plots
 dev.off()
 
