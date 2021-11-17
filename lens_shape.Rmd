@@ -1779,6 +1779,7 @@ fig.c <- anis_habs +
         text = element_text(size = 16)) +
   ylab("Anisotropy") +
   geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$mean_anisotropy == "Lens_replica"], linetype = "dotted") +
   scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") )
