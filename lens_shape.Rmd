@@ -1193,7 +1193,7 @@ df_pca$group <- species_stage_means$life_stage
 #extract loadings of the variables
 pca_loadings <- data.frame(Variables = rownames(lens.pca$rotation), lens.pca$rotation)
 
-#make ggpolot of results  
+#make ggplot of results  
 plot_pca <- ggplot(df_pca, 
                    aes(x = PC1, y = PC2)) +
   geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = (PC1*4), # adds arrows - eigenvectors
@@ -1202,7 +1202,8 @@ plot_pca <- ggplot(df_pca,
   geom_point(aes(fill=group), pch = 21, alpha = 0.8) + 
   scale_fill_manual(values=c("black","white"), name = "Life stage") +
   # annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) adds eigenvector labels. Not using in this case because too hard to position
-  stat_ellipse(aes(x=PC1, y=PC2), type = "norm") + # adds elliptical clusters
+  stat_ellipse(data = filter(df_pca, group == "tadpole"), aes(x=PC1, y=PC2), type = "norm") + # adds elliptical cluster for tadpole group
+  stat_ellipse(data = filter(df_pca, group == "adult"), aes(x=PC1, y=PC2), type = "norm") + # adds elliptical cluster for adult group
   xlab("PC 1 (53%)") + 
   ylab("PC 2 (33%)") +
   theme_minimal() +
@@ -1210,6 +1211,8 @@ plot_pca <- ggplot(df_pca,
         panel.border = element_rect(fill= "transparent"))
 
 plot_pca
+
+#note for the arros, the one pointing left is for anisotropy, up is for flatness, to the right is for sphericity. 
 
 #### Panel B: violin of 3 shape metrics by tadpole and adult ####
 
