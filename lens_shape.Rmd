@@ -1193,7 +1193,7 @@ df_pca$group <- species_stage_means$life_stage
 #extract loadings of the variables
 pca_loadings <- data.frame(Variables = rownames(lens.pca$rotation), lens.pca$rotation)
 
-#make ggpolot of results  
+#make ggplot of results  
 plot_pca <- ggplot(df_pca, 
                    aes(x = PC1, y = PC2)) +
   geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = (PC1*4), # adds arrows - eigenvectors
@@ -1201,8 +1201,9 @@ plot_pca <- ggplot(df_pca,
                color = "black") +
   geom_point(aes(fill=group), pch = 21, alpha = 0.8) + 
   scale_fill_manual(values=c("black","white"), name = "Life stage") +
-  # annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) adds eigenvector labels. Not using in this case because too hard to position
-  stat_ellipse(aes(x=PC1, y=PC2), type = "norm") + # adds elliptical clusters
+  #annotate("text", x = (pca_loadings$PC1*4), y = (pca_loadings$PC2*4), label = pca_loadings$Variables) + #adds eigenvector labels. Not using in this case because too hard to position
+  stat_ellipse(data = filter(df_pca, group == "tadpole"), aes(x=PC1, y=PC2), type = "norm", linetype = "dotted") + # adds elliptical cluster for tadpole group
+  stat_ellipse(data = filter(df_pca, group == "adult"), aes(x=PC1, y=PC2), type = "norm") + # adds elliptical cluster for adult group
   xlab("PC 1 (53%)") + 
   ylab("PC 2 (33%)") +
   theme_minimal() +
@@ -1210,6 +1211,8 @@ plot_pca <- ggplot(df_pca,
         panel.border = element_rect(fill= "transparent"))
 
 plot_pca
+
+#note for the arrows, the one pointing left is for anisotropy, up is for flatness, to the right is for sphericity. 
 
 #### Panel B: violin of 3 shape metrics by tadpole and adult ####
 
@@ -1779,7 +1782,7 @@ fig.c <- anis_habs +
         text = element_text(size = 16)) +
   ylab("Anisotropy") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$mean_anisotropy == "Lens_replica"], linetype = "dotted") +
+  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") +
   scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") )
@@ -1792,6 +1795,7 @@ fig.d <- anis_act +
         axis.text.y=element_blank(),
         text = element_text(size = 16)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") +
   scale_x_discrete(breaks = c("diurnal","nocturnal","both"),
                    limits = c("diurnal","nocturnal","both"),
                    labels = c("diurnal", "nocturnal", "other"))
@@ -1802,6 +1806,7 @@ fig.e <- sph_habs +
   xlab("Habit") +
   ylab("Sphericity") +
   geom_hline(yintercept = 1, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") +
   scale_x_discrete(breaks = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    limits = c("aquatic","fossorial","semi-aquatic", "subfossorial","ground-dwelling","scansorial"),
                    labels = c("aq.","foss.","semiaq.","subfoss.", "ground", "scans.") )
@@ -1812,6 +1817,7 @@ fig.f <- sph_act +
         axis.text.y=element_blank(),
         text = element_text(size = 16)) +
   geom_hline(yintercept = 1, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") +
   scale_x_discrete(breaks = c("diurnal","nocturnal","both"),
                    limits = c("diurnal","nocturnal","both"),
                    labels = c("diur.", "noct.", "neith."))
