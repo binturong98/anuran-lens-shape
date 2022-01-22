@@ -1287,7 +1287,9 @@ anis.plot <- shape.final %>%
   ylab("Anisotropy value") +
   ylim(c(0,0.5)) +
   #add line for perfect sphere
-  geom_hline(yintercept=0, linetype = "dashed")
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
+
 
 #sphericity plot
 spher.plot <- shape.final %>%
@@ -1302,7 +1304,8 @@ spher.plot <- shape.final %>%
   ylab("Sphericity value") +
   ylim(c(0.75,1)) +
   #add line for perfect sphere
-  geom_hline(yintercept=1, linetype = "dashed")
+  geom_hline(yintercept=1, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
 
 #elongation value
 elong.plot <- shape.final %>%
@@ -1317,7 +1320,8 @@ elong.plot <- shape.final %>%
   ylab("Elongation value") +
   ylim(c(0.75,1)) +
   #add line for perfect sphere
-  geom_hline(yintercept=1, linetype = "dashed")
+  geom_hline(yintercept=1, linetype = "dashed") +
+  geom_hline(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
 
 
 # Construct figure -------
