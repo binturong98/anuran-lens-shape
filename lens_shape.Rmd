@@ -1282,13 +1282,13 @@ anis.plot <- shape.final %>%
   geom_point(aes(fill = stage), pch = 21, alpha = 0.6, size = .7,  position=position_jitterdodge(dodge.width=1, jitter.width = 1)) +
   geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
   geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) + #controls boxes
-  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = 'none') + #controls background
   xlab("") +
   ylab("Anisotropy value") +
   ylim(c(0,0.5)) +
   #add line for perfect sphere
-  geom_hline(yintercept=0, linetype = "dashed") +
-  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
+  geom_hline(yintercept=0, linetype = 'dashed') + #add line for lens replica
+  geom_hline(yintercept = specimen_means$mean_anisotropy[specimen_means$specimen_id == "Lens_replica"], linetype = 'dotted') 
 
 
 #sphericity plot
@@ -1299,13 +1299,13 @@ spher.plot <- shape.final %>%
   geom_point(aes(fill = stage), pch = 21, alpha = 0.6, size = .7,  position=position_jitterdodge(dodge.width=1, jitter.width = 1)) +
   geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
   geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) + #controls boxes
-  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = 'none') + #controls background
   xlab("") +
   ylab("Sphericity value") +
   ylim(c(0.75,1)) +
   #add line for perfect sphere
-  geom_hline(yintercept=1, linetype = "dashed") +
-  geom_hline(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
+   geom_hline(yintercept=1, linetype = 'dashed') + #add line for lens replica
+  geom_hline(yintercept = specimen_means$mean_sphericity[specimen_means$specimen_id == "Lens_replica"], linetype = 'dotted') 
 
 #elongation value
 elong.plot <- shape.final %>%
@@ -1315,13 +1315,15 @@ elong.plot <- shape.final %>%
   geom_point(aes(fill = stage), pch = 21, alpha = 0.6, size = .7,  position=position_jitterdodge(dodge.width=1, jitter.width = 1)) +
   geom_violin(alpha=0.1, trim = T, width = 1, position = position_dodge(1)) + 
   geom_boxplot(width = 0.2, position = position_dodge(1), alpha=0.1) + #controls boxes
-  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.position = "none") + #controls background
+  theme(text = element_text(size=12), panel.background = element_blank(), axis.line = element_line(colour = "black")) + #controls background
+  guides(fill = FALSE) + #removes the life stage legend
   xlab("") +
   ylab("Elongation value") +
   ylim(c(0.75,1)) +
   #add line for perfect sphere
-  geom_hline(yintercept=1, linetype = "dashed") +
-  geom_hline(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"], linetype = "dotted") #add line for lens replica
+  geom_hline(aes(yintercept=1, linetype = "Sphere")) +
+  geom_hline(aes(yintercept = specimen_means$mean_elongation[specimen_means$specimen_id == "Lens_replica"], linetype = "Lens replica")) + #add line for lens replica
+  scale_linetype_manual(name = "Reference shapes", values = c('dashed','dotted'))
 
 
 # Construct figure -------
@@ -1347,7 +1349,7 @@ plots_bottom <- plot_grid(anis.plot, spher.plot, elong.plot,
 grid.arrange(plot_top, plots_bottom, ncol = 1, nrow = 2)
 
 #export figure
-pdf(file = "Figures/Fig2.pdf", width = 6,  height = 8)
+pdf(file = "Figures/Fig2.pdf", width = 12,  height = 8)
 grid.arrange(plot_top, plots_bottom, ncol = 1, nrow = 2)
 dev.off()
 ```
