@@ -1700,10 +1700,14 @@ legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch,
 #print graph
 pdf(file = "Figures/Fig4AB.pdf", width = 13,  height = 5, useDingbats=FALSE)
 par(mfrow=c(1,2))
-ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
-activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
-dev.off()
 
+ecoPlot<-pca2d(eco.pca$x, group= Eco, shape = 16 , col =EcoColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+legend("bottomright", ecoPlot$groups, col=ecoPlot$colors, pch=ecoPlot$pch, box.lty=0)
+
+activPlot<-pca2d(activ.pca$x, group= activ, shape = 16 , col =activColr, show.centroids = TRUE, radius =1.5,show.labels=F)
+legend("bottomright", activPlot$groups, col=activPlot$colors, pch=activPlot$pch, box.lty=0)
+
+dev.off()
 ```
 
 Part 2: Violin plots of adult lens shape across ecology (habitat and activity period)
